@@ -1,3 +1,187 @@
+# ============================================================================
+# Python Virtual Environments
+# ============================================================================
 .venv/
-__pycache__/
-*.pyc
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+pythonenv*
+
+# ============================================================================
+# IDE and Editor Files
+# ============================================================================
+# VS Code
+.vscode/
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+*.code-workspace
+
+# IntelliJ/GoLand
+.idea/
+*.iml
+*.iws
+*.ipr
+out/
+.idea_modules/
+
+# Vim
+*.swp
+*.swo
+*~
+*.un~
+
+# Emacs
+*#
+.#*
+\#*#
+.#*
+
+# ============================================================================
+# Go Specific
+# ============================================================================
+# Binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+*.test
+*.out
+
+# Dependency directories
+vendor/
+node_modules/
+
+# Go workspace files
+go.sum
+go.mod
+*.mod
+*.sum
+
+# Go test cache
+*.test
+*.prof
+
+# Go binaries
+bin/
+dist/
+build/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+
+# ============================================================================
+# Build Artifacts
+# ============================================================================
+/target
+/build
+/dist
+/out
+/bin
+*.tar.gz
+*.zip
+*.tgz
+*.rar
+
+# ============================================================================
+# Logs and Databases
+# ============================================================================
+*.log
+*.log.*
+logs/
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+
+# ============================================================================
+# OS Generated Files
+# ============================================================================
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.lnk
+
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon
+._*
+.Spotlight-V100
+.Trashes
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+.nfs*
+
+# ============================================================================
+# Test Coverage
+# ============================================================================
+coverage.out
+coverage.html
+coverage.xml
+*.coverprofile
+*.cov
+.coveralls.yml
+
+# ============================================================================
+# Environment Files
+# ============================================================================
+.env
+.env.local
+.env.*.local
+.env.production
+.env.staging
+.env.development
+.env.test
+!.env.example
+
+# ============================================================================
+# Docker
+# ============================================================================
+.dockerignore
+Dockerfile*
+docker-compose*.yml
+.docker/
+*.pid
+*.seed
+*.pid.lock
+
+# ============================================================================
+# Temporary Files
+# ============================================================================
+tmp/
+temp/
+*.tmp
+*.temp
+*.swp
+*.swo
+*~
+*.bak
+*.old
+*.orig
+
+# ============================================================================
+# Project Specific
+# ============================================================================
+# Spoke-tool specific ignores
+audit.log
+*.backup
+generated/
+test-results/
+.prof
+*.mem
+*.cpu
