@@ -1,0 +1,57 @@
+graph LR
+    subgraph Legend [Color Legend]
+        L1[Input]:::input
+        L2[Processing]:::phase
+        L3[SLM]:::slm
+        L4[Output]:::output
+        L5[Decision]:::decision
+    end
+
+    subgraph TestSpoke [Test Spoke]
+        direction TB
+        T_In[Code + Tests]:::input
+        T_Analyze[Analyze Gaps]:::phase
+        T_SLM1[CodeBERT<br/>DeepSeek]:::slm
+        T_Generate[Generate Tests]:::phase
+        T_Run[Execute]:::phase
+        T_Decision{Fail?}:::decision
+        T_SLM2[DeepSeek<br/>Analysis]:::slm
+        T_Explain[Explain Failure]:::phase
+        T_Out[Tests + Report]:::output
+        
+        T_In --> T_Analyze
+        T_Analyze --> T_SLM1
+        T_SLM1 --> T_Generate
+        T_Generate --> T_Run
+        T_Run --> T_Decision
+        T_Decision -->|Yes| T_SLM2
+        T_SLM2 --> T_Explain
+        T_Explain -.-> T_Out
+        T_Decision -->|No| T_Out
+    end
+    
+    subgraph DocSpoke [Readme Spoke]
+        direction TB
+        D_In[Code + Tests]:::input
+        D_Extract[Extract Content]:::phase
+        D_SLM1[CodeBERT<br/>DeepSeek]:::slm
+        D_Analyze[Analyze Patterns]:::phase
+        D_SLM2[Gemma 2B<br/>Summarize]:::slm
+        D_Generate[Generate Sections]:::phase
+        D_Merge[Merge & Format]:::phase
+        D_Out[README.md]:::output
+        
+        D_In --> D_Extract
+        D_Extract --> D_SLM1
+        D_SLM1 --> D_Analyze
+        D_Analyze --> D_SLM2
+        D_SLM2 --> D_Generate
+        D_Generate --> D_Merge
+        D_Merge --> D_Out
+    end
+
+    classDef input fill:#adb5bd,stroke:#333,color:#333
+    classDef phase fill:#2ec4b6,stroke:#333,color:#333
+    classDef slm fill:#8338ec,stroke:#333,color:#fff
+    classDef output fill:#ff9f1c,stroke:#333,color:#333
+    classDef decision fill:#e71d36,stroke:#333,color:#fff

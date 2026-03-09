@@ -1,0 +1,64 @@
+sequenceDiagram
+    participant Dev as Developer
+    participant FS as File System
+    participant Hub as Orchestrator Hub
+    participant Test as Test Spoke
+    participant SLM as SLM Pool
+    participant Readme as Readme Spoke
+    participant Git as Git
+    
+    Note over Dev,Git: Development Workflow
+    
+    Dev->>FS: Writes/Modifies Code
+    FS-->>Hub: File Change Event
+    
+    Hub->>Test: Trigger Test Generation
+    Test->>FS: Read Changed Files
+    Test->>SLM: Analyze Code (CodeBERT)
+    SLM-->>Test: Code Structure
+    
+    Test->>SLM: Generate Tests (DeepSeek 7B)
+    SLM-->>Test: Test Code
+    
+    Test->>FS: Write Test Files
+    Test->>Test: Run Tests
+    
+    alt Tests Pass
+        Test-->>Hub: Tests Passed
+        Hub->>Readme: Trigger Doc Update
+        
+        Readme->>FS: Read Code + Tests
+        Readme->>SLM: Extract Examples (CodeBERT)
+        SLM-->>Readme: Examples
+        
+        Readme->>SLM: Summarize API (Gemma 2B)
+        SLM-->>Readme: API Docs
+        
+        Readme->>FS: Update README.md
+        Readme->>Git: Commit Changes
+        Git-->>Dev: Updated Docs
+        
+    else Tests Fail
+        Test->>SLM: Analyze Failure (DeepSeek 7B)
+        SLM-->>Test: Failure Explanation
+        
+        Test-->>Hub: Report Failures
+        Hub-->>Dev: Test Report + Explanations
+        
+        Note over Dev: Developer Fixes Code
+        Dev->>FS: Fix Code
+        FS-->>Hub: New Change Event
+        Note over Hub,Git: Cycle Repeats
+    end
+    
+    Note over Hub,SLM: Squeeze Mechanism Active
+    Hub->>Hub: Monitor CPU/Memory
+    alt High Load
+        Hub->>Test: Reduce Concurrency
+        Hub->>Readme: Throttle Generation
+    end
+    
+    Note over FS,Git: Audit Trail
+    Test->>Hub: Log Test Generation
+    Readme->>Hub: Log Doc Update
+    Hub->>Hub: Write Audit Log

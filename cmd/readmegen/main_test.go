@@ -1,0 +1,84 @@
+cat > cmd/readmegen/main_test.go << 'EOF'
+package main
+
+import (
+	"os"
+	"path/filepath"
+	"testing"
+)
+
+func TestLoadConfig(t *testing.T) {
+	// Create temp dir for test
+	tmpDir := t.TempDir()
+	configPath := filepath.Join(tmpDir, "config.yaml")
+
+	// Test with non-existent config (should return defaults)
+	cfg, err := loadConfig(configPath)
+	if err != nil {
+		t.Fatalf("loadConfig with missing file failed: %v", err)
+	}
+	if cfg == nil {
+		t.Fatal("expected non-nil config")
+	}
+	if cfg.ProjectRoot != "" {
+		t.Errorf("expected empty project root, got %s", cfg.ProjectRoot)
+	}
+}
+
+func TestGetModelName(t *testing.T) {
+	cfg := &types.Config{
+		Models: struct {
+			Encoder string `json:"encoder" yaml:"encoder"`
+			Decoder string `json:"decoder" yaml:"decoder"`
+			Fast    string `json:"fast" yaml:"fast"`
+		}{
+			Encoder: "codebert",
+			Decoder: "deepseek-coder:7b",
+			Fast:    "gemma2:2b",
+		},
+	}
+
+	tests := []struct {
+		modelType model.ModelType
+		expected  string
+	}{
+		{model.CodeBERT, "codebert"},
+		{model.DeepSeek7B, "deepseek-coder:7b"},
+		{model.Gemma2B, "gemma2:2b"},
+	}
+
+	for _, tt := range tests {
+		t.Run(string(tt.modelType), func(t *testing.T) {
+			got := getModelName(tt.modelType, cfg)
+			if got != tt.expected {
+				t.Errorf("getModelName() = %s, want %s", got, tt.expected)
+			}
+		})
+	}
+}
+
+func TestHasChanged(t *testing.T) {
+	old := &types.CodeAnalysis{
+		Files:     []types.CodeFile{{Path: "test.go"}},
+		Functions: []types.Function{{Name: "Test"}},
+		Timestamp: "2024-01-01T00:00:00Z",
+	}
+
+	new := &types.CodeAnalysis{
+		Files:     []types.CodeFile{{Path: "test.go"}},
+		Functions: []types.Function{{Name: "Test"}},
+		Timestamp: "2024-01-01T00:00:01Z",
+	}
+
+	// Same content, different timestamp - should return true
+	if !hasChanged(old, new) {
+		t.Error("hasChanged() should return true for different timestamp")
+	}
+
+	// Different number of files
+	new.Files = append(new.Files, types.CodeFile{Path: "test2.go"})
+	if !hasChanged(old, new) {
+		t.Error("hasChanged() should return true for different file count")
+	}
+}
+EOF

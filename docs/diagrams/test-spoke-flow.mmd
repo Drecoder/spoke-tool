@@ -1,0 +1,109 @@
+graph TB
+    title["<b>Test Spoke: Generation & Analysis Flow</b>"]
+    style title fill:#fff,stroke:#333,stroke-width:0px,color:#333
+    
+    subgraph Input [Input Sources]
+        direction TB
+        CodeFiles[("Changed Code Files")]
+        ExistingTests[("Existing Test Suite")]
+        CoverageData[("Coverage Reports")]
+    end
+    
+    subgraph Phase1 [Phase 1: Analysis]
+        direction TB
+        A1[Code Structure Parser]
+        A2[Coverage Gap Analyzer]
+        A3[Dependency Mapper]
+        A4[Test Impact Analyzer]
+        
+        A1 --> A2
+        A2 --> A3
+        A3 --> A4
+    end
+    
+    subgraph SLM_Test [SLM Processing]
+        direction LR
+        T_Encoder[CodeBERT<br/>Code Understanding]
+        T_Gen[DeepSeek 7B<br/>Test Generation]
+        
+        T_Encoder --> T_Gen
+    end
+    
+    subgraph Phase2 [Phase 2: Test Generation]
+        direction TB
+        G1[Unit Test Generator]
+        G2[Integration Test Generator]
+        G3[Mock Generator]
+        G4[Test Data Factory]
+        
+        G1 --> G2
+        G2 --> G3
+        G3 --> G4
+    end
+    
+    subgraph Phase3 [Phase 3: Execution]
+        direction TB
+        E1[Test Runner]
+        E2[Coverage Collector]
+        E3[Result Aggregator]
+        
+        E1 --> E2
+        E2 --> E3
+    end
+    
+    subgraph Phase4 [Phase 4: Failure Analysis]
+        direction TB
+        F1[Failure Parser]
+        F2[Error Classifier]
+        F3[Root Cause Analyzer]
+        F4[Explanation Generator]
+        
+        F1 --> F2
+        F2 --> F3
+        F3 --> F4
+    end
+    
+    subgraph SLM_Analysis [SLM Analysis]
+        direction LR
+        F_Encoder[CodeBERT<br/>Error Context]
+        F_Analyzer[DeepSeek 7B<br/>Root Cause Analysis]
+        
+        F_Encoder --> F_Analyzer
+    end
+    
+    subgraph Output [Outputs]
+        O1[("New/Updated Tests")]
+        O2[("Coverage Report")]
+        O3[("Failure Explanations")]
+        O4[("Test Summary")]
+    end
+    
+    Input --> Phase1
+    Phase1 --> SLM_Test
+    SLM_Test --> Phase2
+    Phase2 --> Phase3
+    
+    Phase3 --> Decision{All Tests Pass?}
+    
+    Decision -->|Yes| Output
+    Decision -->|No| Phase4
+    
+    Phase4 --> SLM_Analysis
+    SLM_Analysis --> Phase2
+    
+    Phase4 --> O3
+    Phase3 --> O2
+    Phase2 --> O1
+    Phase3 --> O4
+    
+    classDef input fill:#adb5bd,stroke:#333,color:#333
+    classDef phase fill:#2ec4b6,stroke:#333,color:#333
+    classDef slm fill:#8338ec,stroke:#333,color:#fff
+    classDef output fill:#ff9f1c,stroke:#333,color:#333
+    classDef decision fill:#e71d36,stroke:#333,color:#fff
+    
+    class Input input
+    class Phase1,Phase2,Phase3,Phase4 phase
+    class SLM_Test,SLM_Analysis slm
+    class Output output
+    class Decision decision

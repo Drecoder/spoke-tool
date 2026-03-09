@@ -1,0 +1,68 @@
+graph TD
+    %% Top Level
+    FS[("File System")]
+    Git[("Git Repository")]
+    
+    %% Hub
+    subgraph Hub[Orchestrator Hub]
+        D[Dispatcher]
+        M[Monitor]
+        Q[Queue]
+        A[Audit]
+        S[Squeeze]
+    end
+    
+    %% Spokes
+    subgraph Test[Test Spoke]
+        TA[Analyzer]
+        TG[Generator]
+        TR[Runner]
+        TI[Interpreter]
+    end
+    
+    subgraph Readme[Readme Spoke]
+        RE[Extractor]
+        RS[Summarizer]
+        RF[Formatter]
+        RM[Merger]
+    end
+    
+    %% SLM
+    subgraph SLM[SLM Pool]
+        CB[CodeBERT]
+        G[Gemma 2B]
+        DS[DeepSeek 7B]
+        O[Ollama]
+    end
+    
+    %% Connections
+    FS --> D
+    Git --> D
+    D --> Q
+    Q --> Test
+    Q --> Readme
+    
+    TA --> CB
+    TG --> DS
+    TI --> DS
+    
+    RE --> CB
+    RS --> G
+    RS --> CB
+    
+    TR --> FS
+    RM --> FS
+    RM --> Git
+    TI --> A
+    
+    classDef hub fill:#ff9f1c,stroke:#333,stroke-width:2px,color:#333
+    classDef test fill:#2ec4b6,stroke:#333,stroke-width:2px,color:#333
+    classDef doc fill:#e71d36,stroke:#333,stroke-width:2px,color:#fff
+    classDef slm fill:#8338ec,stroke:#333,stroke-width:2px,color:#fff
+    classDef external fill:#adb5bd,stroke:#333,stroke-width:2px,color:#333
+    
+    class D,M,Q,A,S hub
+    class TA,TG,TR,TI test
+    class RE,RS,RF,RM doc
+    class CB,G,DS,O slm
+    class FS,Git external

@@ -1,0 +1,101 @@
+graph TB
+    title["<b>Readme Spoke: Documentation Generation Flow</b>"]
+    style title fill:#fff,stroke:#333,stroke-width:0px,color:#333
+    
+    subgraph Input_Doc [Input Sources]
+        direction TB
+        SrcCode[("Source Code")]
+        TestSuite[("Passing Tests<br/>Verified Examples")]
+        CurrentReadme[("Existing README.md")]
+        Config[("Project Config")]
+    end
+    
+    subgraph Phase1_Doc [Phase 1: Content Extraction]
+        direction TB
+        D1[Code Walker]
+        D2[Test Parser]
+        D3[Comment Extractor]
+        D4[Config Reader]
+        
+        D1 --> D2
+        D2 --> D3
+        D3 --> D4
+    end
+    
+    subgraph SLM_Extract [SLM Processing - Extraction]
+        direction LR
+        E_Encoder[CodeBERT<br/>Code Understanding]
+        E_Pattern[DeepSeek 7B<br/>Pattern Recognition]
+        
+        E_Encoder --> E_Pattern
+    end
+    
+    subgraph Phase2_Doc [Phase 2: Content Analysis]
+        direction TB
+        C1[API Signature Analyzer]
+        C2[Usage Pattern Detector]
+        C3[Dependency Visualizer]
+        C4[Version Tracker]
+        
+        C1 --> C2
+        C2 --> C3
+        C3 --> C4
+    end
+    
+    subgraph SLM_Summarize [SLM Processing - Summarization]
+        direction LR
+        S_Encoder[CodeBERT<br/>Function Understanding]
+        S_Summarizer[Gemma 2B<br/>API Summarization]
+        
+        S_Encoder --> S_Summarizer
+    end
+    
+    subgraph Phase3_Doc [Phase 3: Content Generation]
+        direction TB
+        R1[API Reference Generator]
+        R2[Example Formatter]
+        R3[Installation Guide Gen]
+        R4[Contributing Guide Gen]
+        R5[Badge Generator]
+        
+        R1 --> R2
+        R2 --> R3
+        R3 --> R4
+        R4 --> R5
+    end
+    
+    subgraph Phase4_Doc [Phase 4: Structure & Merge]
+        direction TB
+        M1[Section Matcher]
+        M2[Content Merger]
+        M3[Link Validator]
+        M4[Style Formatter]
+        
+        M1 --> M2
+        M2 --> M3
+        M3 --> M4
+    end
+    
+    subgraph Output_Doc [Outputs]
+        O1_Doc[("Updated README.md")]
+        O2_Doc[("Change Log")]
+        O3_Doc[("Validation Report")]
+    end
+    
+    Input_Doc --> Phase1_Doc
+    Phase1_Doc --> SLM_Extract
+    SLM_Extract --> Phase2_Doc
+    Phase2_Doc --> SLM_Summarize
+    SLM_Summarize --> Phase3_Doc
+    Phase3_Doc --> Phase4_Doc
+    Phase4_Doc --> Output_Doc
+    
+    classDef input fill:#adb5bd,stroke:#333,color:#333
+    classDef phase fill:#e71d36,stroke:#333,color:#fff
+    classDef slm fill:#8338ec,stroke:#333,color:#fff
+    classDef output fill:#2ec4b6,stroke:#333,color:#333
+    
+    class Input_Doc input
+    class Phase1_Doc,Phase2_Doc,Phase3_Doc,Phase4_Doc phase
+    class SLM_Extract,SLM_Summarize slm
+    class Output_Doc output

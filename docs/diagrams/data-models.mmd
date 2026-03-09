@@ -1,0 +1,83 @@
+graph TD
+    title["<b>Data Models Overview</b>"]
+    style title fill:#fff,stroke:#333,stroke-width:0px,color:#333
+    
+    subgraph Code[Code Models]
+        CF[Code File]
+        FN[Function]
+        CL[Class]
+        CA[Code Analysis]
+        
+        CF --> CA
+        FN --> CA
+        CL --> CA
+        FN --> CF
+        CL --> CF
+    end
+    
+    subgraph Test[Test Models]
+        TF[Test File]
+        TR[Test Result]
+        TS[Test Suite]
+        TFAIL[Test Failure]
+        TSUG[Test Suggestion]
+        TCOV[Test Coverage]
+        
+        TF --> TS
+        TS --> TR
+        TR --> TFAIL
+        FN --> TSUG
+        TF --> TCOV
+    end
+    
+    subgraph Doc[Documentation Models]
+        DC[Doc Content]
+        RE[README]
+        RS[README Section]
+        EX[Example]
+        
+        EX --> DC
+        DC --> RS
+        RS --> RE
+    end
+    
+    subgraph Config[Configuration]
+        C[Config]
+        MC[Model Config]
+        TC[Test Config]
+        RC[Readme Config]
+        SC[Squeeze Config]
+        
+        MC --> C
+        TC --> C
+        RC --> C
+        SC --> C
+    end
+    
+    subgraph Enum[Enumerations]
+        L[Language: Go, NodeJS, Python]
+        MF[Model: CodeBERT, Gemma, DeepSeek]
+        FR[Framework: go test, Jest, pytest]
+        ST[Status: Passed, Failed, Skipped]
+    end
+    
+    %% Relationships
+    FN -.-> TSUG
+    TF -.-> FN
+    TR -.-> FN
+    DC -.-> FN
+    EX -.-> TF
+    C -.-> Test
+    C -.-> Doc
+    
+    classDef code fill:#2ec4b6,stroke:#333,color:#333
+    classDef test fill:#ff9f1c,stroke:#333,color:#333
+    classDef doc fill:#e71d36,stroke:#333,color:#fff
+    classDef config fill:#8338ec,stroke:#333,color:#fff
+    classDef enum fill:#adb5bd,stroke:#333,color:#333
+    
+    class CF,FN,CL,CA code
+    class TF,TR,TS,TFAIL,TSUG,TCOV test
+    class DC,RE,RS,EX doc
+    class C,MC,TC,RC,SC config
+    class L,MF,FR,ST enum
