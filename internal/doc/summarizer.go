@@ -177,9 +177,6 @@ func (s *Summarizer) SummarizeAPI(ctx context.Context, functions []*types.Functi
 		return &APISummary{}, nil
 	}
 
-	// Get language from first function
-	language := functions[0].Language
-
 	// Build package/module name from context
 	name := s.extractPackageName(functions)
 

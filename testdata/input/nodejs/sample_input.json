@@ -1,0 +1,344 @@
+{
+  "description": "Sample Node.js input for testing code analyzer",
+  "version": "1.0.0",
+  "snippets": {
+    "simple": [
+      {
+        "name": "Basic Function",
+        "code": "function add(a, b) { return a + b; }"
+      },
+      {
+        "name": "Arrow Function",
+        "code": "const multiply = (x, y) => x * y;"
+      },
+      {
+        "name": "Function Expression",
+        "code": "const divide = function(a, b) { return a / b; };"
+      },
+      {
+        "name": "Async Function",
+        "code": "async function fetchData() { const response = await fetch('/api/data'); return response.json(); }"
+      }
+    ],
+    "classes": [
+      {
+        "name": "Simple Class",
+        "code": "class Calculator { add(a, b) { return a + b; } subtract(a, b) { return a - b; } }"
+      },
+      {
+        "name": "Class with Constructor",
+        "code": "class Person { constructor(name, age) { this.name = name; this.age = age; } greet() { return `Hello, my name is ${this.name}`; } }"
+      },
+      {
+        "name": "Class with Static Methods",
+        "code": "class MathUtils { static sum(...numbers) { return numbers.reduce((a, b) => a + b, 0); } static multiply(...numbers) { return numbers.reduce((a, b) => a * b, 1); } }"
+      },
+      {
+        "name": "Class with Getters/Setters",
+        "code": "class Temperature { constructor(celsius) { this._celsius = celsius; } get fahrenheit() { return this._celsius * 9/5 + 32; } set fahrenheit(value) { this._celsius = (value - 32) * 5/9; } }"
+      },
+      {
+        "name": "Class extending another",
+        "code": "class Animal { constructor(name) { this.name = name; } speak() { return `${this.name} makes a sound`; } } class Dog extends Animal { speak() { return `${this.name} barks`; } }"
+      }
+    ],
+    "modules": [
+      {
+        "name": "CommonJS Export",
+        "code": "module.exports = { add, subtract }; function add(a, b) { return a + b; } function subtract(a, b) { return a - b; }"
+      },
+      {
+        "name": "ES6 Export",
+        "code": "export const PI = 3.14159; export function circleArea(radius) { return PI * radius * radius; }"
+      },
+      {
+        "name": "Mixed Exports",
+        "code": "export default class Logger { log(message) { console.log(message); } } export const DEBUG = true;"
+      },
+      {
+        "name": "Import Statements",
+        "code": "import fs from 'fs'; import { join, resolve } from 'path'; import * as utils from './utils.js';"
+      },
+      {
+        "name": "Require Imports",
+        "code": "const express = require('express'); const { body, validationResult } = require('express-validator');"
+      }
+    ],
+    "async": [
+      {
+        "name": "Promise Creation",
+        "code": "const promise = new Promise((resolve, reject) => { setTimeout(() => resolve('done'), 1000); });"
+      },
+      {
+        "name": "Promise Chain",
+        "code": "fetch('/api/user')\n  .then(res => res.json())\n  .then(data => processUser(data))\n  .catch(err => console.error(err));"
+      },
+      {
+        "name": "Async/Await",
+        "code": "async function getUser(id) { try { const response = await fetch(`/api/users/${id}`); return await response.json(); } catch (err) { console.error('Failed to fetch user:', err); } }"
+      },
+      {
+        "name": "Promise.all",
+        "code": "const [users, posts] = await Promise.all([ fetch('/api/users'), fetch('/api/posts') ]);"
+      },
+      {
+        "name": "Promise.race",
+        "code": "const result = await Promise.race([ fetch('/api/data'), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 5000)) ]);"
+      }
+    ],
+    "errors": [
+      {
+        "name": "Try/Catch",
+        "code": "try { JSON.parse(invalidJson); } catch (err) { console.error('Parse error:', err.message); }"
+      },
+      {
+        "name": "Custom Error Class",
+        "code": "class ValidationError extends Error { constructor(message, field) { super(message); this.name = 'ValidationError'; this.field = field; } } throw new ValidationError('Invalid email', 'email');"
+      },
+      {
+        "name": "Error Handling with Callbacks",
+        "code": "function readFile(path, callback) { fs.readFile(path, 'utf8', (err, data) => { if (err) { callback(err); return; } callback(null, data); }); }"
+      },
+      {
+        "name": "Error in Promise",
+        "code": "Promise.reject(new Error('something went wrong')).catch(err => console.error(err));"
+      }
+    ],
+    "data_structures": [
+      {
+        "name": "Array Operations",
+        "code": "const numbers = [1, 2, 3, 4, 5]; const doubled = numbers.map(n => n * 2); const evens = numbers.filter(n => n % 2 === 0); const sum = numbers.reduce((a, b) => a + b, 0);"
+      },
+      {
+        "name": "Object Manipulation",
+        "code": "const user = { name: 'Alice', age: 30 }; const keys = Object.keys(user); const values = Object.values(user); const entries = Object.entries(user);"
+      },
+      {
+        "name": "Map Usage",
+        "code": "const map = new Map(); map.set('key', 'value'); map.set(42, 'answer'); map.set({ id: 1 }, 'object key');"
+      },
+      {
+        "name": "Set Usage",
+        "code": "const set = new Set([1, 2, 3, 3, 4]); set.add(5); set.delete(2); const has = set.has(3);"
+      },
+      {
+        "name": "WeakMap/WeakSet",
+        "code": "const weakMap = new WeakMap(); let obj = {}; weakMap.set(obj, 'metadata'); const weakSet = new WeakSet(); weakSet.add(obj);"
+      }
+    ],
+    "control_flow": [
+      {
+        "name": "Conditionals",
+        "code": "if (x > 0) { return 'positive'; } else if (x < 0) { return 'negative'; } else { return 'zero'; }"
+      },
+      {
+        "name": "Switch Statement",
+        "code": "switch (status) { case 200: return 'OK'; case 404: return 'Not Found'; case 500: return 'Error'; default: return 'Unknown'; }"
+      },
+      {
+        "name": "Loops",
+        "code": "for (let i = 0; i < 10; i++) { console.log(i); } for (const item of items) { process(item); } for (const key in object) { console.log(key, object[key]); }"
+      },
+      {
+        "name": "While Loop",
+        "code": "let i = 0; while (i < 10) { console.log(i); i++; } do { console.log(i); i++; } while (i < 5);"
+      }
+    ],
+    "advanced": [
+      {
+        "name": "Closures",
+        "code": "function createCounter() { let count = 0; return { increment: () => ++count, decrement: () => --count, getCount: () => count }; }"
+      },
+      {
+        "name": "Currying",
+        "code": "const curry = (fn) => (a) => (b) => fn(a, b); const curriedAdd = curry((a, b) => a + b); const add5 = curriedAdd(5);"
+      },
+      {
+        "name": "Decorator Pattern",
+        "code": "function log(target, name, descriptor) { const original = descriptor.value; descriptor.value = function(...args) { console.log(`Calling ${name} with`, args); return original.apply(this, args); }; return descriptor; }"
+      },
+      {
+        "name": "Proxy",
+        "code": "const handler = { get: (obj, prop) => prop in obj ? obj[prop] : 'default' }; const proxy = new Proxy({}, handler);"
+      },
+      {
+        "name": "Generator Functions",
+        "code": "function* idGenerator() { let id = 1; while (true) { yield id++; } } const gen = idGenerator(); gen.next().value;"
+      }
+    ],
+    "event_handling": [
+      {
+        "name": "EventEmitter",
+        "code": "const EventEmitter = require('events'); class MyEmitter extends EventEmitter {} const myEmitter = new MyEmitter(); myEmitter.on('event', () => { console.log('event fired'); }); myEmitter.emit('event');"
+      },
+      {
+        "name": "DOM Events",
+        "code": "document.getElementById('button').addEventListener('click', (e) => { e.preventDefault(); console.log('clicked'); });"
+      }
+    ],
+    "streams": [
+      {
+        "name": "Readable Stream",
+        "code": "const readable = fs.createReadStream('file.txt', 'utf8'); readable.on('data', chunk => console.log(chunk)); readable.on('end', () => console.log('done'));"
+      },
+      {
+        "name": "Writable Stream",
+        "code": "const writable = fs.createWriteStream('output.txt'); writable.write('Hello'); writable.write('World'); writable.end();"
+      },
+      {
+        "name": "Transform Stream",
+        "code": "const { Transform } = require('stream'); const upperCase = new Transform({ transform(chunk, encoding, callback) { this.push(chunk.toString().toUpperCase()); callback(); } });"
+      },
+      {
+        "name": "Pipeline",
+        "code": "const { pipeline } = require('stream/promises'); await pipeline(readable, transform, writable);"
+      }
+    ],
+    "http": [
+      {
+        "name": "HTTP Server",
+        "code": "const http = require('http'); const server = http.createServer((req, res) => { res.writeHead(200); res.end('Hello World'); }); server.listen(3000);"
+      },
+      {
+        "name": "Express App",
+        "code": "const express = require('express'); const app = express(); app.get('/users', (req, res) => { res.json([{ id: 1, name: 'Alice' }]); }); app.listen(3000);"
+      },
+      {
+        "name": "Middleware",
+        "code": "app.use(express.json()); app.use((req, res, next) => { console.log(`${req.method} ${req.url}`); next(); });"
+      },
+      {
+        "name": "Route Parameters",
+        "code": "app.get('/users/:id', (req, res) => { const id = req.params.id; res.json({ id, name: 'User' }); });"
+      }
+    ],
+    "testing": [
+      {
+        "name": "Jest Test",
+        "code": "describe('Calculator', () => { test('adds numbers', () => { expect(add(2, 3)).toBe(5); }); test('subtracts numbers', () => { expect(subtract(10, 4)).toBe(6); }); });"
+      },
+      {
+        "name": "Mock Function",
+        "code": "const mockFn = jest.fn(); mockFn.mockReturnValue(42); expect(mockFn()).toBe(42); expect(mockFn).toHaveBeenCalled();"
+      },
+      {
+        "name": "Spy",
+        "code": "const spy = jest.spyOn(console, 'log'); console.log('test'); expect(spy).toHaveBeenCalledWith('test'); spy.mockRestore();"
+      },
+      {
+        "name": "Async Test",
+        "code": "test('async test', async () => { const data = await fetchData(); expect(data).toBeDefined(); });"
+      }
+    ],
+    "config_examples": [
+      {
+        "name": "Package.json",
+        "code": {
+          "name": "sample-project",
+          "version": "1.0.0",
+          "description": "A sample Node.js project",
+          "main": "index.js",
+          "scripts": {
+            "start": "node index.js",
+            "test": "jest",
+            "dev": "nodemon index.js"
+          },
+          "dependencies": {
+            "express": "^4.18.2",
+            "axios": "^1.6.0"
+          },
+          "devDependencies": {
+            "jest": "^29.7.0",
+            "nodemon": "^3.0.0"
+          }
+        }
+      },
+      {
+        "name": "ESLint Config",
+        "code": {
+          "env": {
+            "node": true,
+            "es2021": true,
+            "jest": true
+          },
+          "extends": ["eslint:recommended", "plugin:prettier/recommended"],
+          "parserOptions": {
+            "ecmaVersion": "latest",
+            "sourceType": "module"
+          },
+          "rules": {
+            "no-unused-vars": "warn",
+            "no-console": "off"
+          }
+        }
+      },
+      {
+        "name": "Babel Config",
+        "code": {
+          "presets": ["@babel/preset-env"],
+          "plugins": ["@babel/plugin-transform-runtime"]
+        }
+      }
+    ],
+    "edge_cases": [
+      {
+        "name": "Empty Function",
+        "code": "function empty() {}"
+      },
+      {
+        "name": "Function with No Return",
+        "code": "function noReturn() { let x = 42; }"
+      },
+      {
+        "name": "Very Long Function",
+        "code": "function veryLong() { return 'a'.repeat(10000); }"
+      },
+      {
+        "name": "Deep Nesting",
+        "code": "function deeplyNested() { (function() { (function() { (function() { (function() { console.log('deep'); })(); })(); })(); })(); }"
+      },
+      {
+        "name": "Invalid Syntax",
+        "code": "function invalid( { return } ) @#$%"
+      },
+      {
+        "name": "Unicode in Code",
+        "code": "function café() { return 'résumé'; } const 世界 = 'hello';"
+      },
+      {
+        "name": "Emoji in Comments",
+        "code": "// 🚀 This is a rocket function\n// 🌟 Returns a star\nfunction star() { return '✨'; }"
+      }
+    ],
+    "typescript": [
+      {
+        "name": "Type Annotations",
+        "code": "function greet(name: string, age: number): string { return `Hello ${name}, you are ${age} years old`; }"
+      },
+      {
+        "name": "Interface",
+        "code": "interface User { id: number; name: string; email?: string; readonly createdAt: Date; }"
+      },
+      {
+        "name": "Type Alias",
+        "code": "type ID = string | number; type Callback<T> = (data: T) => void;"
+      },
+      {
+        "name": "Generic Function",
+        "code": "function identity<T>(arg: T): T { return arg; }"
+      },
+      {
+        "name": "Generic Class",
+        "code": "class Box<T> { private content: T; constructor(content: T) { this.content = content; } get(): T { return this.content; } set(content: T) { this.content = content; } }"
+      },
+      {
+        "name": "Enum",
+        "code": "enum Status { Pending = 'PENDING', Approved = 'APPROVED', Rejected = 'REJECTED' }"
+      },
+      {
+        "name": "Union Types",
+        "code": "type Result<T> = { success: true; data: T } | { success: false; error: string };"
+      }
+    ]
+  }
+}

@@ -1,6 +1,3 @@
-# From PowerShell (not Git Bash), run:
-cd C:\WS\spoke-tool
-
 # Create the build.ps1 file
 cat > build.ps1 << 'EOF'
 param(
@@ -8,7 +5,7 @@ param(
     [string]$Args
 )
 
-function Build-Tool {
+function Invoke-BuildTool {
     param([string]$Name)
     Write-Host "Building $Name..." -ForegroundColor Green
     $version = "dev"
@@ -24,14 +21,14 @@ function Build-Tool {
 
 switch ($Target) {
     "build" {
-        Build-Tool "readmegen"
-        Build-Tool "testgen"
+        Invoke-BuildTool "readmegen"
+        Invoke-BuildTool "testgen"
     }
     "build-readmegen" {
-        Build-Tool "readmegen"
+        Invoke-BuildTool "readmegen"
     }
     "build-testgen" {
-        Build-Tool "testgen"
+        Invoke-BuildTool "testgen"
     }
     "test" {
         Write-Host "Running tests..." -ForegroundColor Green

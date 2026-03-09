@@ -476,8 +476,6 @@ func Merge(base, override *types.Config) *types.Config {
 
 // WriteExample writes an example configuration file
 func WriteExample(path string) error {
-	cfg := DefaultConfig()
-
 	// Add comments to the example
 	example := `# Spoke Tool Configuration
 # 

@@ -44,6 +44,7 @@ type CoverageResult struct {
 	Uncovered  []UncoveredLine    `json:"uncovered,omitempty"`
 	Timestamp  string             `json:"timestamp"`
 	Command    string             `json:"command"`
+	Output     string             `json:"output,omitempty"`
 }
 
 // UncoveredLine represents an uncovered line of code
@@ -140,7 +141,7 @@ func (c *CoverageAnalyzer) AnalyzeNodeJSCoverage() (*CoverageResult, error) {
 	// Run Jest with coverage
 	cmd := exec.Command("npx", "jest", "--coverage", "--json", "--outputFile=coverage.json")
 	cmd.Dir = c.workDir
-	output, err := cmd.CombinedOutput()
+	output, _ := cmd.CombinedOutput()
 	result.Output = string(output)
 
 	// Parse Jest coverage output
@@ -168,7 +169,7 @@ func (c *CoverageAnalyzer) AnalyzePythonCoverage() (*CoverageResult, error) {
 	// Run pytest with coverage
 	cmd := exec.Command("pytest", "--cov=.", "--cov-report=xml", "--cov-report=term")
 	cmd.Dir = c.workDir
-	output, err := cmd.CombinedOutput()
+	output, _ := cmd.CombinedOutput()
 	result.Output = string(output)
 
 	// Parse coverage XML

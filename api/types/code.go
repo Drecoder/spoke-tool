@@ -1,4 +1,3 @@
-cat > api/types/code.go << 'EOF'
 package types
 
 // Language represents the programming language
@@ -88,4 +87,3 @@ type CodeChange struct {
 	NewHash     string     `json:"new_hash,omitempty"`
 	Timestamp   string     `json:"timestamp"`
 }
-EOF

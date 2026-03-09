@@ -1,4 +1,3 @@
-cat > cmd/readmegen/main.go << 'EOF'
 package main
 
 import (
@@ -397,4 +396,3 @@ func printStats(stats *shared.Stats) {
 	log.Printf("Write time:        %v", stats.WriteDuration)
 	log.Printf("Total time:        %v", stats.TotalDuration)
 }
-EOF

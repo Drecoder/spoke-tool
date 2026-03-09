@@ -1,0 +1,395 @@
+// ============================================================================
+// Simple Functions
+// ============================================================================
+
+package main
+
+import "fmt"
+
+// Basic arithmetic functions
+func add(a, b int) int {
+    return a + b
+}
+
+func subtract(a, b int) int {
+    return a - b
+}
+
+func multiply(a, b int) int {
+    return a * b
+}
+
+func divide(a, b int) (int, error) {
+    if b == 0 {
+        return 0, fmt.Errorf("division by zero")
+    }
+    return a / b, nil
+}
+
+// ============================================================================
+// Functions with Multiple Returns
+// ============================================================================
+
+func divideWithRemainder(a, b int) (quotient, remainder int, err error) {
+    if b == 0 {
+        return 0, 0, fmt.Errorf("division by zero")
+    }
+    quotient = a / b
+    remainder = a % b
+    return
+}
+
+func getCoordinates() (x, y int) {
+    x = 10
+    y = 20
+    return
+}
+
+// ============================================================================
+// Variadic Functions
+// ============================================================================
+
+func sum(numbers ...int) int {
+    total := 0
+    for _, n := range numbers {
+        total += n
+    }
+    return total
+}
+
+func concatenate(separator string, parts ...string) string {
+    result := ""
+    for i, part := range parts {
+        if i > 0 {
+            result += separator
+        }
+        result += part
+    }
+    return result
+}
+
+// ============================================================================
+// Recursive Functions
+// ============================================================================
+
+func factorial(n int) int {
+    if n <= 1 {
+        return 1
+    }
+    return n * factorial(n-1)
+}
+
+func fibonacci(n int) int {
+    if n <= 1 {
+        return n
+    }
+    return fibonacci(n-1) + fibonacci(n-2)
+}
+
+// ============================================================================
+// Functions with Complex Logic
+// ============================================================================
+
+func processItems(items []int, filter func(int) bool, transform func(int) int) []int {
+    result := make([]int, 0)
+    for _, item := range items {
+        if filter(item) {
+            result = append(result, transform(item))
+        }
+    }
+    return result
+}
+
+func retry(attempts int, fn func() error) error {
+    var err error
+    for i := 0; i < attempts; i++ {
+        err = fn()
+        if err == nil {
+            return nil
+        }
+    }
+    return fmt.Errorf("failed after %d attempts: %w", attempts, err)
+}
+
+// ============================================================================
+// Methods on Structs
+// ============================================================================
+
+type Person struct {
+    Name string
+    Age  int
+}
+
+func (p Person) Greet() string {
+    return fmt.Sprintf("Hello, my name is %s", p.Name)
+}
+
+func (p *Person) HaveBirthday() {
+    p.Age++
+}
+
+func (p Person) IsAdult() bool {
+    return p.Age >= 18
+}
+
+// ============================================================================
+// Interface Implementations
+// ============================================================================
+
+type Greeter interface {
+    Greet() string
+}
+
+type Stringer interface {
+    String() string
+}
+
+func (p Person) String() string {
+    return fmt.Sprintf("Person{Name: %s, Age: %d}", p.Name, p.Age)
+}
+
+// ============================================================================
+// Error Handling Functions
+// ============================================================================
+
+type ValidationError struct {
+    Field string
+    Value interface{}
+    Message string
+}
+
+func (e ValidationError) Error() string {
+    return fmt.Sprintf("validation error on field %s: %s (got %v)", e.Field, e.Message, e.Value)
+}
+
+func validateAge(age int) error {
+    if age < 0 {
+        return ValidationError{Field: "age", Value: age, Message: "cannot be negative"}
+    }
+    if age > 150 {
+        return ValidationError{Field: "age", Value: age, Message: "exceeds maximum"}
+    }
+    return nil
+}
+
+// ============================================================================
+// Concurrency Functions
+// ============================================================================
+
+func worker(id int, jobs <-chan int, results chan<- int) {
+    for job := range jobs {
+        results <- job * 2
+    }
+}
+
+func processConcurrently(data []int, workers int) []int {
+    jobs := make(chan int, len(data))
+    results := make(chan int, len(data))
+    
+    // Start workers
+    for w := 0; w < workers; w++ {
+        go worker(w, jobs, results)
+    }
+    
+    // Send jobs
+    for _, d := range data {
+        jobs <- d
+    }
+    close(jobs)
+    
+    // Collect results
+    output := make([]int, len(data))
+    for i := 0; i < len(data); i++ {
+        output[i] = <-results
+    }
+    
+    return output
+}
+
+// ============================================================================
+// Channel Operations
+// ============================================================================
+
+func ping(pings chan<- string, msg string) {
+    pings <- msg
+}
+
+func pong(pings <-chan string, pongs chan<- string) {
+    msg := <-pings
+    pongs <- msg
+}
+
+func fanOut(input <-chan int, outputs []chan<- int) {
+    for value := range input {
+        for _, out := range outputs {
+            out <- value
+        }
+    }
+}
+
+func fanIn(inputs []<-chan int, output chan<- int) {
+    for _, in := range inputs {
+        go func(ch <-chan int) {
+            for value := range ch {
+                output <- value
+            }
+        }(in)
+    }
+}
+
+// ============================================================================
+// Defer and Panic/Recover
+// ============================================================================
+
+func safeDivide(a, b int) (result int, err error) {
+    defer func() {
+        if r := recover(); r != nil {
+            err = fmt.Errorf("panic recovered: %v", r)
+        }
+    }()
+    result = a / b
+    return
+}
+
+func withCleanup() error {
+    resource, err := acquireResource()
+    if err != nil {
+        return err
+    }
+    defer resource.Close()
+    
+    // Do work with resource
+    return resource.Process()
+}
+
+// ============================================================================
+// Complex Types
+// ============================================================================
+
+type Matrix struct {
+    rows, cols int
+    data       [][]float64
+}
+
+func NewMatrix(rows, cols int) *Matrix {
+    data := make([][]float64, rows)
+    for i := range data {
+        data[i] = make([]float64, cols)
+    }
+    return &Matrix{rows: rows, cols: cols, data: data}
+}
+
+func (m *Matrix) Set(i, j int, value float64) {
+    m.data[i][j] = value
+}
+
+func (m *Matrix) Get(i, j int) float64 {
+    return m.data[i][j]
+}
+
+func (m *Matrix) Add(other *Matrix) (*Matrix, error) {
+    if m.rows != other.rows || m.cols != other.cols {
+        return nil, fmt.Errorf("matrix dimensions don't match")
+    }
+    result := NewMatrix(m.rows, m.cols)
+    for i := 0; i < m.rows; i++ {
+        for j := 0; j < m.cols; j++ {
+            result.data[i][j] = m.data[i][j] + other.data[i][j]
+        }
+    }
+    return result, nil
+}
+
+// ============================================================================
+// Generic Functions (Go 1.18+)
+// ============================================================================
+
+func Map[T any, U any](input []T, fn func(T) U) []U {
+    result := make([]U, len(input))
+    for i, v := range input {
+        result[i] = fn(v)
+    }
+    return result
+}
+
+func Filter[T any](input []T, predicate func(T) bool) []T {
+    result := make([]T, 0)
+    for _, v := range input {
+        if predicate(v) {
+            result = append(result, v)
+        }
+    }
+    return result
+}
+
+func Reduce[T any, U any](input []T, initial U, fn func(U, T) U) U {
+    result := initial
+    for _, v := range input {
+        result = fn(result, v)
+    }
+    return result
+}
+
+// ============================================================================
+// Benchmark Functions
+// ============================================================================
+
+func BenchmarkAdd(b *testing.B) {
+    for i := 0; i < b.N; i++ {
+        add(i, i+1)
+    }
+}
+
+func BenchmarkFibonacci(b *testing.B) {
+    for i := 0; i < b.N; i++ {
+        fibonacci(20)
+    }
+}
+
+// ============================================================================
+// Test Functions
+// ============================================================================
+
+func TestAdd(t *testing.T) {
+    tests := []struct {
+        name string
+        a, b int
+        want int
+    }{
+        {"positive", 2, 3, 5},
+        {"negative", -2, -3, -5},
+        {"mixed", -2, 3, 1},
+        {"zero", 0, 5, 5},
+    }
+    
+    for _, tt := range tests {
+        t.Run(tt.name, func(t *testing.T) {
+            if got := add(tt.a, tt.b); got != tt.want {
+                t.Errorf("add() = %v, want %v", got, tt.want)
+            }
+        })
+    }
+}
+
+func TestDivide(t *testing.T) {
+    _, err := divide(10, 0)
+    if err == nil {
+        t.Error("expected error for division by zero")
+    }
+}
+
+// ============================================================================
+// Example Functions
+// ============================================================================
+
+func ExampleAdd() {
+    result := add(2, 3)
+    fmt.Println(result)
+    // Output: 5
+}
+
+func ExamplePerson_Greet() {
+    p := Person{Name: "Alice", Age: 30}
+    fmt.Println(p.Greet())
+    // Output: Hello, my name is Alice
+}

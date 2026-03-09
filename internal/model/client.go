@@ -12,9 +12,6 @@ import (
 	"github.com/yourusername/spoke-tool/internal/common"
 )
 
-// ModelType represents the different SLM models we support
-type ModelType string
-
 const (
 	// Encoder models for code understanding
 	CodeBERT ModelType = "codebert"
@@ -40,32 +37,6 @@ type ClientConfig struct {
 	Models     map[ModelType]string
 }
 
-// Request represents a request to an SLM
-type Request struct {
-	ID          string                 `json:"id"`
-	Model       ModelType              `json:"model"`
-	Language    types.Language         `json:"language"`
-	Prompt      string                 `json:"prompt"`
-	System      string                 `json:"system,omitempty"`
-	Context     []int                  `json:"context,omitempty"`
-	Options     map[string]interface{} `json:"options,omitempty"`
-	Temperature float32                `json:"temperature,omitempty"`
-	MaxTokens   int                    `json:"max_tokens,omitempty"`
-}
-
-// Response represents a response from an SLM
-type Response struct {
-	ID         string         `json:"id"`
-	RequestID  string         `json:"request_id"`
-	Model      ModelType      `json:"model"`
-	Language   types.Language `json:"language"`
-	Response   string         `json:"response"`
-	TokensUsed int            `json:"tokens_used"`
-	Duration   time.Duration  `json:"duration_ms"`
-	Timestamp  time.Time      `json:"timestamp"`
-	Error      string         `json:"error,omitempty"`
-	Done       bool           `json:"done"`
-}
 
 // ModelStatus represents the status of a model
 type ModelStatus struct {
@@ -367,70 +338,3 @@ func IsRetryableError(err error) bool {
 	return false
 }
 
-// Prompt templates for common tasks - PURELY DESCRIPTIVE, no fixes
-var PromptTemplates = struct {
-	// Code understanding (CodeBERT)
-	CodeAnalysis string
-
-	// Test generation (DeepSeek)
-	TestGeneration string
-
-	// Documentation (Gemma)
-	APIDocumentation string
-
-	// Failure analysis (DeepSeek) - EXPLAINS only, no fixes
-	FailureAnalysis string
-}{
-	CodeAnalysis: `Analyze this %s code and describe its structure.
-DO NOT suggest improvements - just describe what you see.
-
-Code:
-%s
-
-Describe:
-- Functions and their purposes
-- Parameters and return values
-- Dependencies
-- Any notable patterns
-
-Keep the description factual and objective.`,
-
-	TestGeneration: `Generate unit tests for this %s function.
-DO NOT modify the original code - only create tests.
-
-Function: %s
-Code:
-%s
-
-Create tests that verify the function's behavior.
-Use %s testing framework.
-Return ONLY the test code, no explanations.`,
-
-	APIDocumentation: `Write clear documentation for this %s function.
-DO NOT suggest changes - just document what it does.
-
-Function: %s
-Code:
-%s
-
-Include:
-- Brief description of purpose
-- Parameter explanations
-- Return value description
-- One simple example
-
-Use %s documentation format.`,
-
-	FailureAnalysis: `Analyze why this test failed.
-DO NOT suggest code fixes - just explain what went wrong.
-
-Test: %s
-Error: %s
-Test Code:
-%s
-Source Code:
-%s
-
-Explain the mismatch between expected and actual behavior.
-Focus on what happened, not how to fix it.`,
-}

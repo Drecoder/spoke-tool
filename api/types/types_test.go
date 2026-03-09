@@ -1,4 +1,3 @@
-cat > api/types/types_test.go << 'EOF'
 package types
 
 import (
@@ -60,4 +59,3 @@ func TestReadmeSection(t *testing.T) {
 		t.Errorf("expected installation section, got %s", section.Type)
 	}
 }
-EOF

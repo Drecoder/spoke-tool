@@ -1,4 +1,3 @@
-cat > api/types/shared.go << 'EOF'
 package types
 
 import "time"
@@ -76,4 +75,3 @@ type Response struct {
 	Data    any    `json:"data,omitempty"`
 	Error   *Error `json:"error,omitempty"`
 }
-EOF

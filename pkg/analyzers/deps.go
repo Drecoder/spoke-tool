@@ -677,7 +677,6 @@ func (d *DepsAnalyzer) exportToMermaid(graph *DependencyGraph) string {
 		toID := nodeIDs[edge.To]
 
 		if fromID != "" && toID != "" {
-			style := d.getMermaidStyle(edge.Type)
 			sb.WriteString(fmt.Sprintf("    %s -->|%s| %s\n", fromID, edge.Type, toID))
 		}
 	}

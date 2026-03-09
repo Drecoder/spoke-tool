@@ -1,4 +1,3 @@
-cat > cmd/shared/types.go << 'EOF'
 package shared
 
 import (
@@ -143,4 +142,3 @@ type Stats struct {
 	AnalysisDuration time.Duration `json:"analysis_duration_ms"`
 	WriteDuration    time.Duration `json:"write_duration_ms"`
 }
-EOF

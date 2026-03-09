@@ -1,4 +1,3 @@
-cat > api/types/test.go << 'EOF'
 package types
 
 // TestFramework represents the testing framework used
@@ -78,4 +77,3 @@ type TestCoverage struct {
 	Uncovered   []string          `json:"uncovered_lines"` // Lines without coverage
 	Timestamp   string            `json:"timestamp"`
 }
-EOF

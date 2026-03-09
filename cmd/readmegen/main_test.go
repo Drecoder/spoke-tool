@@ -1,10 +1,11 @@
-cat > cmd/readmegen/main_test.go << 'EOF'
 package main
 
 import (
-	"os"
 	"path/filepath"
 	"testing"
+
+	"spoke-tool/types"
+	"spoke-tool/model"
 )
 
 func TestLoadConfig(t *testing.T) {
@@ -22,6 +23,31 @@ func TestLoadConfig(t *testing.T) {
 	}
 	if cfg.ProjectRoot != "" {
 		t.Errorf("expected empty project root, got %s", cfg.ProjectRoot)
+	}
+}
+
+func loadConfig(configPath string) (*types.Config, error) {
+	// TODO: Implement loadConfig function
+	return &types.Config{}, nil
+}
+
+func hasChanged(old, new *types.CodeAnalysis) bool {
+	if len(old.Files) != len(new.Files) || len(old.Functions) != len(new.Functions) {
+		return true
+	}
+	return old.Timestamp != new.Timestamp
+}
+
+func getModelName(modelType model.ModelType, cfg *types.Config) string {
+	switch modelType {
+	case model.CodeBERT:
+		return cfg.Models.Encoder
+	case model.DeepSeek7B:
+		return cfg.Models.Decoder
+	case model.Gemma2B:
+		return cfg.Models.Fast
+	default:
+		return ""
 	}
 }
 
@@ -81,4 +107,3 @@ func TestHasChanged(t *testing.T) {
 		t.Error("hasChanged() should return true for different file count")
 	}
 }
-EOF

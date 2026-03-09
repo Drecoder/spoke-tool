@@ -217,8 +217,7 @@ func (l *Logger) WithError(err error) *Logger {
 	}
 
 	// Add error code if it's our error type
-	var e *Error
-	if AsError(err, &e) {
+	if e, ok := err.(*Error); ok {
 		fields["error_code"] = string(e.Code)
 		if len(e.Fields) > 0 {
 			fields["error_fields"] = e.Fields
@@ -499,13 +498,13 @@ func Warnf(format string, args ...interface{}) {
 	GetLogger().Warnf(format, args...)
 }
 
-// Error logs an error message using the default logger
-func Error(args ...interface{}) {
+// LogError logs an error message using the default logger
+func LogError(args ...interface{}) {
 	GetLogger().Error(args...)
 }
 
-// Errorf logs a formatted error message using the default logger
-func Errorf(format string, args ...interface{}) {
+// LogErrorf logs a formatted error message using the default logger
+func LogErrorf(format string, args ...interface{}) {
 	GetLogger().Errorf(format, args...)
 }
 

@@ -1,4 +1,3 @@
-cat > api/types/doc.go << 'EOF'
 package types
 
 // DocFormat represents the documentation format
@@ -83,4 +82,3 @@ type DocSuggestion struct {
 	Section      DocSection `json:"section,omitempty"`
 	Confidence   float64    `json:"confidence"`
 }
-EOF
