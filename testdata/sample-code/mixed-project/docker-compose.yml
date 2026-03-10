@@ -1,0 +1,1286 @@
+version: '3.8'
+
+# ============================================================================
+# Services
+# ============================================================================
+
+services:
+  # Go Backend API Service
+  go-api:
+    build:
+      context: ./go-server
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - GO_VERSION=1.21
+        - APP_VERSION=${APP_VERSION:-1.0.0}
+        - BUILD_TIME=${BUILD_TIME:-2024-01-15T10:00:00Z}
+        - COMMIT_HASH=${COMMIT_HASH:-latest}
+    image: ${DOCKER_REGISTRY:-localhost}/mixed-project/go-api:${TAG:-latest}
+    container_name: mixed-project-go-api
+    hostname: go-api
+    restart: unless-stopped
+    ports:
+      - "${GO_API_PORT:-8080}:8080"
+      - "${GO_API_DEBUG_PORT:-2345}:2345"
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - APP_VERSION=${APP_VERSION:-1.0.0}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - LOG_FORMAT=${LOG_FORMAT:-json}
+      
+      # Database
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-go_api_db}
+      - DB_SSL_MODE=${DB_SSL_MODE:-disable}
+      - DB_MAX_CONNECTIONS=${DB_MAX_CONNECTIONS:-20}
+      - DB_IDLE_CONNECTIONS=${DB_IDLE_CONNECTIONS:-5}
+      - DB_CONNECTION_TIMEOUT=${DB_CONNECTION_TIMEOUT:-30}
+      
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-0}
+      - REDIS_POOL_SIZE=${REDIS_POOL_SIZE:-10}
+      
+      # JWT
+      - JWT_SECRET=${JWT_SECRET:-your-secret-key-change-in-production}
+      - JWT_EXPIRATION=${JWT_EXPIRATION:-24}
+      
+      # External Services
+      - PAYMENT_GATEWAY_URL=${PAYMENT_GATEWAY_URL:-http://payment-gateway:8082}
+      - PAYMENT_GATEWAY_API_KEY=${PAYMENT_GATEWAY_API_KEY:-}
+      
+      # Monitoring
+      - METRICS_ENABLED=${METRICS_ENABLED:-true}
+      - METRICS_PATH=${METRICS_PATH:-/metrics}
+      - TRACING_ENABLED=${TRACING_ENABLED:-true}
+      - JAEGER_ENDPOINT=${JAEGER_ENDPOINT:-jaeger:6831}
+      
+      # Feature Flags
+      - ENABLE_CACHE=${ENABLE_CACHE:-true}
+      - ENABLE_RATE_LIMITING=${ENABLE_RATE_LIMITING:-true}
+      - RATE_LIMIT=${RATE_LIMIT:-100}
+      - RATE_LIMIT_BURST=${RATE_LIMIT_BURST:-50}
+    env_file:
+      - ./go-server/.env
+    volumes:
+      - go-logs:/var/log/go-api
+      - go-data:/data
+      - ./go-server/config:/app/config:ro
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - backend
+      - frontend
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+      replicas: ${GO_API_REPLICAS:-2}
+      update_config:
+        parallelism: 1
+        delay: 10s
+        failure_action: rollback
+      restart_policy:
+        condition: any
+        delay: 5s
+        max_attempts: 3
+        window: 120s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.go-api.rule=Host(`api.localhost`)"
+        - "traefik.http.services.go-api.loadbalancer.server.port=8080"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=go-api"
+      - "com.mixed-project.language=go"
+      - "com.mixed-project.version=${APP_VERSION:-1.0.0}"
+
+  # Node.js Frontend Service
+  node-frontend:
+    build:
+      context: ./web-client
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - NODE_VERSION=20
+        - NPM_VERSION=10
+        - API_URL=${API_URL:-http://go-api:8080}
+        - WS_URL=${WS_URL:-ws://go-api:8080}
+    image: ${DOCKER_REGISTRY:-localhost}/mixed-project/node-frontend:${TAG:-latest}
+    container_name: mixed-project-node-frontend
+    hostname: node-frontend
+    restart: unless-stopped
+    ports:
+      - "${NODE_PORT:-3000}:3000"
+    environment:
+      - NODE_ENV=${NODE_ENV:-production}
+      - API_URL=http://go-api:8080
+      - WS_URL=ws://go-api:8080
+      - SESSION_SECRET=${SESSION_SECRET:-session-secret-change-in-production}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-1}
+      - LOG_LEVEL=${LOG_LEVEL:-info}
+      - ENABLE_ANALYTICS=${ENABLE_ANALYTICS:-true}
+      - GA_TRACKING_ID=${GA_TRACKING_ID:-}
+    env_file:
+      - ./web-client/.env
+    volumes:
+      - node-logs:/var/log/node-frontend
+      - node-cache:/app/.cache
+      - ./web-client/config:/app/config:ro
+    depends_on:
+      go-api:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - frontend
+      - monitoring
+    healthcheck:
+      test: ["CMD", "node", "-e", "require('http').get('http://localhost:3000/health', (r) => {process.exit(r.statusCode !== 200)})"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+      replicas: ${NODE_REPLICAS:-2}
+      update_config:
+        parallelism: 1
+        delay: 10s
+      labels:
+        - "traefik.enable=true"
+        - "traefik.http.routers.node-frontend.rule=Host(`app.localhost`)"
+        - "traefik.http.services.node-frontend.loadbalancer.server.port=3000"
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=node-frontend"
+      - "com.mixed-project.language=nodejs"
+
+  # Python Data Processor Service
+  python-processor:
+    build:
+      context: ./scripts
+      dockerfile: Dockerfile
+      target: production
+      args:
+        - PYTHON_VERSION=3.11
+        - PIP_VERSION=23.3
+    image: ${DOCKER_REGISTRY:-localhost}/mixed-project/python-processor:${TAG:-latest}
+    container_name: mixed-project-python-processor
+    hostname: python-processor
+    restart: unless-stopped
+    ports:
+      - "${PYTHON_PORT:-8000}:8000"
+    environment:
+      - PYTHON_ENV=${PYTHON_ENV:-production}
+      - PYTHONUNBUFFERED=1
+      - PYTHONDONTWRITEBYTECODE=1
+      
+      # Database
+      - DB_HOST=postgres
+      - DB_PORT=5432
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${DB_NAME:-processor_db}
+      
+      # Redis
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_PASSWORD=${REDIS_PASSWORD:-}
+      - REDIS_DB=${REDIS_DB:-2}
+      
+      # Processing
+      - PROCESSOR_WORKERS=${PROCESSOR_WORKERS:-4}
+      - PROCESSOR_QUEUE_SIZE=${PROCESSOR_QUEUE_SIZE:-100}
+      - PROCESSOR_TIMEOUT=${PROCESSOR_TIMEOUT:-300}
+      - PROCESSOR_RETRY_LIMIT=${PROCESSOR_RETRY_LIMIT:-3}
+      - PROCESSOR_RETRY_DELAY=${PROCESSOR_RETRY_DELAY:-60}
+      
+      # ML Models
+      - MODEL_PATH=${MODEL_PATH:-/app/models}
+      - MODEL_CACHE_SIZE=${MODEL_CACHE_SIZE:-1024}
+      
+      # Batch Processing
+      - BATCH_SIZE=${BATCH_SIZE:-1000}
+      - BATCH_INTERVAL=${BATCH_INTERVAL:-60}
+      - SCHEDULER_ENABLED=${SCHEDULER_ENABLED:-true}
+    env_file:
+      - ./scripts/.env
+    volumes:
+      - python-logs:/var/log/python-processor
+      - python-data:/data
+      - python-models:/app/models
+      - ./scripts/config:/app/config:ro
+      - ./scripts/data:/app/data
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - backend
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 30s
+    deploy:
+      resources:
+        limits:
+          cpus: '2'
+          memory: 2G
+        reservations:
+          cpus: '1'
+          memory: 1G
+      replicas: ${PYTHON_REPLICAS:-2}
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=python-processor"
+      - "com.mixed-project.language=python"
+
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: mixed-project-postgres
+    hostname: postgres
+    restart: unless-stopped
+    ports:
+      - "${POSTGRES_PORT:-5432}:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER:-postgres}
+      - POSTGRES_PASSWORD=${DB_PASSWORD:-postgres}
+      - POSTGRES_DB=${DB_NAME:-mixed_project_db}
+      - POSTGRES_MULTIPLE_DATABASES=go_api_db,processor_db,test_db
+      - PGDATA=/var/lib/postgresql/data/pgdata
+      - POSTGRES_INITDB_ARGS=--encoding=UTF-8 --locale=C
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./postgres/init:/docker-entrypoint-initdb.d
+      - ./postgres/backups:/backups
+      - ./postgres/conf:/etc/postgresql:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER:-postgres} -d ${DB_NAME:-mixed_project_db}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=postgres"
+      - "com.mixed-project.type=database"
+
+  # Redis Cache
+  redis:
+    image: redis:7-alpine
+    container_name: mixed-project-redis
+    hostname: redis
+    restart: unless-stopped
+    ports:
+      - "${REDIS_PORT:-6379}:6379"
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass ${REDIS_PASSWORD:-}
+      --maxmemory 256mb
+      --maxmemory-policy allkeys-lru
+      --save 900 1
+      --save 300 10
+      --save 60 10000
+    volumes:
+      - redis-data:/data
+      - ./redis/conf:/usr/local/etc/redis:ro
+    networks:
+      - backend
+      - frontend
+    healthcheck:
+      test: ["CMD", "redis-cli", "-a", "${REDIS_PASSWORD:-}", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+        reservations:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=redis"
+      - "com.mixed-project.type=cache"
+
+  # RabbitMQ Message Queue
+  rabbitmq:
+    image: rabbitmq:3.12-management-alpine
+    container_name: mixed-project-rabbitmq
+    hostname: rabbitmq
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_PORT:-5672}:5672"
+      - "${RABBITMQ_MANAGEMENT_PORT:-15672}:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-guest}
+      - RABBITMQ_DEFAULT_VHOST=/
+      - RABBITMQ_ERLANG_COOKIE=${RABBITMQ_COOKIE:-secret-cookie}
+    volumes:
+      - rabbitmq-data:/var/lib/rabbitmq
+      - ./rabbitmq/definitions.json:/etc/rabbitmq/definitions.json:ro
+      - ./rabbitmq/rabbitmq.conf:/etc/rabbitmq/rabbitmq.conf:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "rabbitmq-diagnostics", "-q", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=rabbitmq"
+      - "com.mixed-project.type=message-queue"
+
+  # Elasticsearch for Logging
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.11.0
+    container_name: mixed-project-elasticsearch
+    hostname: elasticsearch
+    restart: unless-stopped
+    ports:
+      - "${ELASTICSEARCH_PORT:-9200}:9200"
+    environment:
+      - discovery.type=single-node
+      - xpack.security.enabled=false
+      - xpack.monitoring.collection.enabled=true
+      - cluster.name=mixed-project-cluster
+      - node.name=elasticsearch
+      - network.host=0.0.0.0
+      - "ES_JAVA_OPTS=-Xms512m -Xmx512m"
+      - bootstrap.memory_lock=true
+      - indices.memory.index_buffer_size=30%
+      - indices.breaker.total.limit=40%
+    volumes:
+      - elasticsearch-data:/usr/share/elasticsearch/data
+      - ./elasticsearch/config:/usr/share/elasticsearch/config:ro
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9200/_cluster/health?wait_for_status=yellow&timeout=50s"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+        reservations:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=elasticsearch"
+      - "com.mixed-project.type=logging"
+
+  # Kibana for Log Visualization
+  kibana:
+    image: docker.elastic.co/kibana/kibana:8.11.0
+    container_name: mixed-project-kibana
+    hostname: kibana
+    restart: unless-stopped
+    ports:
+      - "${KIBANA_PORT:-5601}:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+      - SERVER_NAME=kibana
+      - LOGGING_QUIET=true
+      - MONITORING_ENABLED=true
+    volumes:
+      - ./kibana/config:/usr/share/kibana/config:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:5601/api/status"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=kibana"
+      - "com.mixed-project.type=visualization"
+
+  # Logstash for Log Processing
+  logstash:
+    image: docker.elastic.co/logstash/logstash:8.11.0
+    container_name: mixed-project-logstash
+    hostname: logstash
+    restart: unless-stopped
+    ports:
+      - "${LOGSTASH_BEATS_PORT:-5044}:5044"
+      - "${LOGSTASH_HTTP_PORT:-9600}:9600"
+    environment:
+      - LS_JAVA_OPTS=-Xms256m -Xmx256m
+      - XPACK_MONITORING_ENABLED=false
+    volumes:
+      - ./logstash/pipeline:/usr/share/logstash/pipeline:ro
+      - ./logstash/config:/usr/share/logstash/config:ro
+      - ./logs:/var/log:ro
+    depends_on:
+      elasticsearch:
+        condition: service_healthy
+    networks:
+      - monitoring
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=logstash"
+      - "com.mixed-project.type=log-processor"
+
+  # Prometheus Monitoring
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: mixed-project-prometheus
+    hostname: prometheus
+    restart: unless-stopped
+    ports:
+      - "${PROMETHEUS_PORT:-9090}:9090"
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/usr/share/prometheus/console_libraries'
+      - '--web.console.templates=/usr/share/prometheus/consoles'
+      - '--web.enable-lifecycle'
+      - '--storage.tsdb.retention.time=30d'
+      - '--storage.tsdb.retention.size=10GB'
+    volumes:
+      - prometheus-data:/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - ./prometheus/rules:/etc/prometheus/rules:ro
+      - ./prometheus/alerts:/etc/prometheus/alerts:ro
+    networks:
+      - frontend
+      - backend
+      - monitoring
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:9090/-/healthy"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=prometheus"
+      - "com.mixed-project.type=monitoring"
+
+  # Grafana Visualization
+  grafana:
+    image: grafana/grafana:latest
+    container_name: mixed-project-grafana
+    hostname: grafana
+    restart: unless-stopped
+    ports:
+      - "${GRAFANA_PORT:-3001}:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=${GRAFANA_ADMIN_USER:-admin}
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_ADMIN_PASSWORD:-admin}
+      - GF_INSTALL_PLUGINS=grafana-piechart-panel,grafana-worldmap-panel
+      - GF_SERVER_ROOT_URL=http://localhost:3001
+      - GF_AUTH_ANONYMOUS_ENABLED=false
+      - GF_AUTH_BASIC_ENABLED=true
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/etc/grafana/provisioning/dashboards/home.json
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+      - ./grafana/plugins:/var/lib/grafana/plugins:ro
+    depends_on:
+      prometheus:
+        condition: service_healthy
+    networks:
+      - monitoring
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=grafana"
+      - "com.mixed-project.type=visualization"
+
+  # Jaeger Tracing
+  jaeger:
+    image: jaegertracing/all-in-one:latest
+    container_name: mixed-project-jaeger
+    hostname: jaeger
+    restart: unless-stopped
+    ports:
+      - "${JAEGER_UI_PORT:-16686}:16686"
+      - "14250:14250"
+      - "14268:14268"
+      - "6831:6831/udp"
+      - "6832:6832/udp"
+    environment:
+      - COLLECTOR_OTLP_ENABLED=true
+      - COLLECTOR_ZIPKIN_HOST_PORT=:9411
+      - SPAN_STORAGE_TYPE=memory
+    volumes:
+      - jaeger-data:/tmp/jaeger
+    networks:
+      - monitoring
+      - backend
+    healthcheck:
+      test: ["CMD", "wget", "--spider", "http://localhost:16686"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=jaeger"
+      - "com.mixed-project.type=tracing"
+
+  # Traefik Reverse Proxy
+  traefik:
+    image: traefik:v3.0
+    container_name: mixed-project-traefik
+    hostname: traefik
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "8082:8080"
+    command:
+      - "--api.insecure=true"
+      - "--providers.docker=true"
+      - "--providers.docker.exposedbydefault=false"
+      - "--entrypoints.web.address=:80"
+      - "--entrypoints.websecure.address=:443"
+      - "--certificatesresolvers.letsencrypt.acme.email=admin@example.com"
+      - "--certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge=true"
+      - "--certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web"
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - traefik-data:/letsencrypt
+      - ./traefik/config:/etc/traefik:ro
+    networks:
+      - frontend
+      - backend
+      - monitoring
+    healthcheck:
+      test: ["CMD", "traefik", "healthcheck"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=traefik"
+      - "com.mixed-project.type=proxy"
+
+  # Nginx Alternative (if Traefik not used)
+  nginx:
+    image: nginx:alpine
+    container_name: mixed-project-nginx
+    hostname: nginx
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
+      - ./nginx/ssl:/etc/nginx/ssl:ro
+      - ./static:/usr/share/nginx/html/static:ro
+      - ./media:/usr/share/nginx/html/media:ro
+    depends_on:
+      - go-api
+      - node-frontend
+    networks:
+      - frontend
+    healthcheck:
+      test: ["CMD", "nginx", "-t"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    profiles:
+      - alternative
+    labels:
+      - "com.mixed-project.service=nginx"
+      - "com.mixed-project.type=proxy"
+
+  # Adminer Database Management
+  adminer:
+    image: adminer:latest
+    container_name: mixed-project-adminer
+    hostname: adminer
+    restart: unless-stopped
+    ports:
+      - "${ADMINER_PORT:-8081}:8080"
+    environment:
+      - ADMINER_DEFAULT_SERVER=postgres
+      - ADMINER_DESIGN=pepa-linha
+    depends_on:
+      - postgres
+    networks:
+      - backend
+    profiles:
+      - tools
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=adminer"
+      - "com.mixed-project.type=tool"
+
+  # Redis Commander
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: mixed-project-redis-commander
+    hostname: redis-commander
+    restart: unless-stopped
+    ports:
+      - "${REDIS_COMMANDER_PORT:-8082}:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379:0:${REDIS_PASSWORD:-}
+      - HTTP_USER=${REDIS_COMMANDER_USER:-admin}
+      - HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD:-admin}
+    depends_on:
+      - redis
+    networks:
+      - backend
+    profiles:
+      - tools
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=redis-commander"
+      - "com.mixed-project.type=tool"
+
+  # RabbitMQ Management
+  rabbitmq-management:
+    image: rabbitmq:3.12-management-alpine
+    container_name: mixed-project-rabbitmq-management
+    hostname: rabbitmq-management
+    restart: unless-stopped
+    ports:
+      - "${RABBITMQ_MANAGEMENT_PORT:-15673}:15672"
+    environment:
+      - RABBITMQ_DEFAULT_USER=${RABBITMQ_USER:-guest}
+      - RABBITMQ_DEFAULT_PASS=${RABBITMQ_PASSWORD:-guest}
+    depends_on:
+      - rabbitmq
+    networks:
+      - backend
+    profiles:
+      - tools
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=rabbitmq-management"
+      - "com.mixed-project.type=tool"
+
+  # Backup Service
+  backup:
+    image: alpine:latest
+    container_name: mixed-project-backup
+    hostname: backup
+    restart: "no"
+    command: |
+      sh -c "
+        apk add --no-cache postgresql-client aws-cli
+        while true; do
+          TIMESTAMP=\$$(date +%Y%m%d-%H%M%S)
+          echo \"Creating backup at \$${TIMESTAMP}\"
+          
+          # Backup PostgreSQL
+          PGPASSWORD=${DB_PASSWORD:-postgres} pg_dump -h postgres -U ${DB_USER:-postgres} -d ${DB_NAME:-mixed_project_db} > /backups/backup-\$${TIMESTAMP}.sql
+          
+          # Compress backup
+          gzip /backups/backup-\$${TIMESTAMP}.sql
+          
+          # Upload to S3 (if configured)
+          if [ -n \"\$${AWS_ACCESS_KEY_ID}\" ]; then
+            aws s3 cp /backups/backup-\$${TIMESTAMP}.sql.gz s3://\$${BACKUP_BUCKET}/postgres/
+          fi
+          
+          # Delete old backups (keep last 7 days)
+          find /backups -name \"backup-*.sql.gz\" -mtime +7 -delete
+          
+          sleep 86400
+        done
+      "
+    volumes:
+      - postgres-backups:/backups
+      - ./backup-scripts:/scripts:ro
+    environment:
+      - AWS_ACCESS_KEY_ID=${AWS_ACCESS_KEY_ID:-}
+      - AWS_SECRET_ACCESS_KEY=${AWS_SECRET_ACCESS_KEY:-}
+      - AWS_DEFAULT_REGION=${AWS_REGION:-us-east-1}
+      - BACKUP_BUCKET=${BACKUP_BUCKET:-my-backups}
+    depends_on:
+      - postgres
+    networks:
+      - backend
+    profiles:
+      - backup
+    deploy:
+      resources:
+        limits:
+          cpus: '0.25'
+          memory: 256M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=backup"
+      - "com.mixed-project.type=utility"
+
+  # Mailhog for Email Testing
+  mailhog:
+    image: mailhog/mailhog:latest
+    container_name: mixed-project-mailhog
+    hostname: mailhog
+    restart: unless-stopped
+    ports:
+      - "${MAILHOG_SMTP_PORT:-1025}:1025"
+      - "${MAILHOG_UI_PORT:-8025}:8025"
+    networks:
+      - backend
+    profiles:
+      - tools
+      - development
+    deploy:
+      resources:
+        limits:
+          cpus: '0.1'
+          memory: 64M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=mailhog"
+      - "com.mixed-project.type=email"
+
+  # MinIO for S3-compatible storage
+  minio:
+    image: minio/minio:latest
+    container_name: mixed-project-minio
+    hostname: minio
+    restart: unless-stopped
+    ports:
+      - "${MINIO_API_PORT:-9000}:9000"
+      - "${MINIO_CONSOLE_PORT:-9001}:9001"
+    environment:
+      - MINIO_ROOT_USER=${MINIO_ROOT_USER:-minioadmin}
+      - MINIO_ROOT_PASSWORD=${MINIO_ROOT_PASSWORD:-minioadmin}
+      - MINIO_REGION=${MINIO_REGION:-us-east-1}
+      - MINIO_BROWSER_REDIRECT_URL=http://localhost:9001
+    command: server /data --console-address ":9001"
+    volumes:
+      - minio-data:/data
+      - ./minio/config:/root/.minio:ro
+    networks:
+      - backend
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+    profiles:
+      - storage
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 512M
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=minio"
+      - "com.mixed-project.type=storage"
+
+  # Test Runner
+  test:
+    build:
+      context: .
+      dockerfile: Dockerfile.test
+    image: ${DOCKER_REGISTRY:-localhost}/mixed-project/test:${TAG:-latest}
+    container_name: mixed-project-test
+    hostname: test
+    restart: "no"
+    environment:
+      - GO_API_URL=http://go-api:8080
+      - NODE_URL=http://node-frontend:3000
+      - PYTHON_URL=http://python-processor:8000
+      - DB_HOST=postgres
+      - DB_USER=${DB_USER:-postgres}
+      - DB_PASSWORD=${DB_PASSWORD:-postgres}
+      - DB_NAME=${TEST_DB_NAME:-test_db}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - REDIS_DB=15
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
+    volumes:
+      - ./test-results:/app/test-results
+      - ./coverage:/app/coverage
+      - ./logs:/app/logs
+    depends_on:
+      go-api:
+        condition: service_healthy
+      node-frontend:
+        condition: service_healthy
+      python-processor:
+        condition: service_healthy
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+    networks:
+      - backend
+      - frontend
+    profiles:
+      - test
+      - ci
+    deploy:
+      resources:
+        limits:
+          cpus: '1'
+          memory: 1G
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "10m"
+        max-file: "3"
+    labels:
+      - "com.mixed-project.service=test"
+      - "com.mixed-project.type=testing"
+
+# ============================================================================
+# Networks
+# ============================================================================
+
+networks:
+  frontend:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-frontend
+    ipam:
+      config:
+        - subnet: 172.20.0.0/24
+          gateway: 172.20.0.1
+    labels:
+      - "com.mixed-project.network=frontend"
+      - "com.mixed-project.type=public"
+
+  backend:
+    driver: bridge
+    internal: true
+    driver_opts:
+      com.docker.network.bridge.name: br-backend
+    ipam:
+      config:
+        - subnet: 172.20.1.0/24
+          gateway: 172.20.1.1
+    labels:
+      - "com.mixed-project.network=backend"
+      - "com.mixed-project.type=private"
+
+  monitoring:
+    driver: bridge
+    driver_opts:
+      com.docker.network.bridge.name: br-monitoring
+    ipam:
+      config:
+        - subnet: 172.20.2.0/24
+          gateway: 172.20.2.1
+    labels:
+      - "com.mixed-project.network=monitoring"
+      - "com.mixed-project.type=monitoring"
+
+# ============================================================================
+# Volumes
+# ============================================================================
+
+volumes:
+  # Application data
+  go-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/go
+      o: bind
+    labels:
+      - "com.mixed-project.volume=go-data"
+      - "com.mixed-project.type=data"
+
+  go-logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./logs/go
+      o: bind
+
+  node-cache:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./cache/node
+      o: bind
+
+  node-logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./logs/node
+      o: bind
+
+  python-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/python
+      o: bind
+
+  python-logs:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./logs/python
+      o: bind
+
+  python-models:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./models
+      o: bind
+
+  # Databases
+  postgres-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/postgres
+      o: bind
+
+  postgres-backups:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./backups/postgres
+      o: bind
+
+  redis-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/redis
+      o: bind
+
+  rabbitmq-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/rabbitmq
+      o: bind
+
+  # Monitoring
+  prometheus-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/prometheus
+      o: bind
+
+  grafana-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/grafana
+      o: bind
+
+  elasticsearch-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/elasticsearch
+      o: bind
+
+  jaeger-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/jaeger
+      o: bind
+
+  traefik-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/traefik
+      o: bind
+
+  # Storage
+  minio-data:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./data/minio
+      o: bind
+
+# ============================================================================
+# Docker Compose Extensions
+# ============================================================================
+
+x-logging: &default-logging
+  driver: "json-file"
+  options:
+    max-size: "10m"
+    max-file: "3"
+
+x-deploy: &default-deploy
+  resources:
+    limits:
+      cpus: '0.5'
+      memory: 512M
+    reservations:
+      cpus: '0.25'
+      memory: 256M
+  restart_policy:
+    condition: any
+    delay: 5s
+    max_attempts: 3
+    window: 120s
+
+x-healthcheck: &default-healthcheck
+  interval: 30s
+  timeout: 10s
+  retries: 3
+  start_period: 30s
+
+# Apply default logging to all services
+services:
+  go-api:
+    logging: *default-logging
+  node-frontend:
+    logging: *default-logging
+  python-processor:
+    logging: *default-logging
+  postgres:
+    logging: *default-logging
+  redis:
+    logging: *default-logging
+  rabbitmq:
+    logging: *default-logging
+  elasticsearch:
+    logging: *default-logging
+  kibana:
+    logging: *default-logging
+  logstash:
+    logging: *default-logging
+  prometheus:
+    logging: *default-logging
+  grafana:
+    logging: *default-logging
+  jaeger:
+    logging: *default-logging
+  traefik:
+    logging: *default-logging
+  nginx:
+    logging: *default-logging
+  adminer:
+    logging: *default-logging
+  redis-commander:
+    logging: *default-logging
+  rabbitmq-management:
+    logging: *default-logging
+  backup:
+    logging: *default-logging
+  mailhog:
+    logging: *default-logging
+  minio:
+    logging: *default-logging
+  test:
+    logging: *default-logging
