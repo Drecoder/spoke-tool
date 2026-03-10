@@ -1,0 +1,506 @@
+# ============================================================================
+# Spoke Tool Configuration
+# ============================================================================
+# 
+# This configuration file controls both the test generation and README
+# generation spokes. All settings can be overridden via environment variables
+# with the prefix SPOKE_ (e.g., SPOKE_LOG_LEVEL=debug).
+#
+# For more information, see: https://github.com/Drecoder/spoke-tool
+
+# ============================================================================
+# Project Settings
+# ============================================================================
+
+# Project root directory (relative or absolute)
+project_root: "."
+
+# Project name (used in README generation)
+project_name: "spoke-tool"
+
+# Project version
+version: "1.0.0"
+
+# ============================================================================
+# Logging Configuration
+# ============================================================================
+
+log:
+  # Log level: debug, info, warn, error
+  level: "info"
+  
+  # Log format: text, json
+  format: "text"
+  
+  # Enable colored output
+  color: true
+  
+  # Log file path (empty = stdout only)
+  file: ""
+  
+  # Max log file size in MB before rotation
+  max_size: 100
+  
+  # Max number of log files to keep
+  max_backups: 3
+  
+  # Max age of log files in days
+  max_age: 30
+
+# ============================================================================
+# Model Configuration (Ollama)
+# ============================================================================
+
+models:
+  # Encoder model for code understanding (CodeBERT)
+  encoder: "codebert"
+  
+  # Decoder model for complex tasks (test generation, error analysis)
+  decoder: "deepseek-coder:7b"
+  
+  # Fast model for simple tasks (documentation generation)
+  fast: "gemma2:2b"
+  
+  # Ollama host
+  ollama_host: "http://localhost:11434"
+  
+  # Model parameters
+  temperature: 0.7
+  max_tokens: 2048
+  timeout: "30s"
+  
+  # Retry configuration for model requests
+  retry:
+    max_attempts: 3
+    initial_delay: "1s"
+    max_delay: "10s"
+    backoff_factor: 2.0
+
+# ============================================================================
+# Test Generation Spoke
+# ============================================================================
+
+test_spoke:
+  # Enable/disable test generation
+  enabled: true
+  
+  # Automatically run tests after generation
+  auto_run: true
+  
+  # Minimum coverage threshold (0-100)
+  coverage_threshold: 80
+  
+  # Test frameworks by language
+  frameworks:
+    go: "testing"
+    nodejs: "jest"
+    python: "pytest"
+  
+  # Test file patterns by language
+  test_file_patterns:
+    go: "*_test.go"
+    nodejs: "*.test.js"
+    python: "test_*.py"
+  
+  # Coverage commands by language
+  coverage_commands:
+    go: "go test -cover"
+    nodejs: "jest --coverage"
+    python: "pytest --cov=."
+  
+  # Test commands by language
+  test_commands:
+    go: "go test"
+    nodejs: "jest"
+    python: "pytest"
+  
+  # Generation options
+  max_tests_per_function: 10
+  include_edge_cases: true
+  generate_mocks: true
+  include_integration_tests: false
+  include_benchmarks: false
+  
+  # Table-driven tests (Go only)
+  table_driven_tests: true
+  
+  # Mock frameworks by language
+  mock_frameworks:
+    go: "github.com/golang/mock"
+    nodejs: "jest-mock"
+    python: "unittest.mock"
+  
+  # Test directory patterns to exclude
+  exclude_dirs:
+    - "vendor"
+    - "node_modules"
+    - ".git"
+    - "testdata"
+    - "mocks"
+  
+  # File extensions to analyze by language
+  extensions:
+    go: [".go"]
+    nodejs: [".js", ".ts", ".jsx", ".tsx"]
+    python: [".py"]
+  
+  # Language-specific settings
+  languages:
+    go:
+      framework: "testing"
+      test_pattern: "*_test.go"
+      cover_command: "go test -cover"
+      test_command: "go test"
+      mock_framework: "github.com/golang/mock"
+      extensions: [".go"]
+      
+      # Go-specific options
+      race_detector: true
+      bench_time: "5s"
+    
+    nodejs:
+      framework: "jest"
+      test_pattern: "*.test.js"
+      cover_command: "jest --coverage"
+      test_command: "jest"
+      mock_framework: "jest-mock"
+      extensions: [".js", ".ts", ".jsx", ".tsx"]
+      
+      # Node.js-specific options
+      jest_config: "jest.config.js"
+      ts_config: "tsconfig.json"
+      npm_install: true
+    
+    python:
+      framework: "pytest"
+      test_pattern: "test_*.py"
+      cover_command: "pytest --cov=."
+      test_command: "pytest"
+      mock_framework: "unittest.mock"
+      extensions: [".py"]
+      
+      # Python-specific options
+      venv_path: ".venv"
+      requirements_file: "requirements.txt"
+      dev_requirements: "requirements-dev.txt"
+  
+  # Parallel test execution
+  parallel:
+    enabled: true
+    max_workers: 4
+  
+  # Test result storage
+  results:
+    store: true
+    path: "test-results"
+    format: "json"  # json, junit, html
+  
+  # Failure analysis
+  failure_analysis:
+    enabled: true
+    model: "deepseek-coder:7b"
+    include_context: true
+    max_explanation_length: 500
+
+# ============================================================================
+# README Generation Spoke
+# ============================================================================
+
+readme_spoke:
+  # Enable/disable README generation
+  enabled: true
+  
+  # Automatically update README when code changes
+  auto_update: true
+  
+  # Sections to include (order matters)
+  sections:
+    - title
+    - badges
+    - description
+    - table_of_contents
+    - installation
+    - quickstart
+    - usage
+    - api
+    - examples
+    - configuration
+    - testing
+    - contributing
+    - license
+    - acknowledgments
+  
+  # Include examples from test files
+  include_examples: true
+  
+  # Maximum examples per function
+  max_examples_per_function: 3
+  
+  # Preserve manually written content
+  preserve_manual: true
+  
+  # Template file (optional)
+  template_file: ""
+  
+  # Output file
+  output_file: "README.md"
+  
+  # Documentation formats by language
+  doc_formats:
+    go: "godoc"
+    nodejs: "jsdoc"
+    python: "pydoc"
+  
+  # Example extraction
+  examples:
+    source: "tests"  # tests, comments, both
+    include_edge_cases: false
+    format: "concise"
+    max_length: 500
+  
+  # API documentation
+  api_docs:
+    include_private: false
+    include_deprecated: true
+    include_examples: true
+    sort_by: "name"  # name, line, none
+  
+  # Badges configuration
+  badges:
+    enabled: true
+    include:
+      - license
+      - version
+      - build
+      - coverage
+      - go_report
+      - npm
+      - pypi
+  
+  # Table of contents
+  toc:
+    enabled: true
+    depth: 3
+    ordered: false
+  
+  # Custom section titles
+  section_titles:
+    installation: "Installation"
+    quickstart: "Quick Start"
+    api: "API Reference"
+    examples: "Examples"
+    contributing: "Contributing"
+    license: "License"
+  
+  # Language-specific documentation settings
+  languages:
+    go:
+      doc_format: "godoc"
+      include_package_docs: true
+      include_examples: true
+      include_tests: true
+    
+    nodejs:
+      doc_format: "jsdoc"
+      include_module_docs: true
+      include_examples: true
+      include_tests: true
+    
+    python:
+      doc_format: "pydoc"
+      include_module_docs: true
+      include_examples: true
+      include_tests: true
+
+# ============================================================================
+# Performance Tuning (Squeeze Mechanism)
+# ============================================================================
+
+squeeze:
+  # Enable/disable adaptive concurrency
+  enabled: true
+  
+  # Maximum CPU usage percentage before throttling
+  max_cpu_percent: 80
+  
+  # Maximum memory usage in MB before throttling
+  max_memory_mb: 4096
+  
+  # Idle time in ms before resuming full speed
+  idle_threshold_ms: 500
+  
+  # Concurrency limits
+  max_concurrent: 4
+  min_concurrent: 1
+  
+  # Throttling factor (0-1)
+  throttle_factor: 0.5
+  
+  # Check interval in milliseconds
+  check_interval_ms: 100
+
+# ============================================================================
+# Audit Logging
+# ============================================================================
+
+audit:
+  # Enable/disable audit logging
+  enabled: true
+  
+  # Audit log file path
+  path: "audit.log"
+  
+  # Log format: json, text
+  format: "json"
+  
+  # Maximum log file size in MB
+  max_size: 100
+  
+  # Max number of log files to keep
+  max_backups: 3
+  
+  # Max age of log files in days
+  max_age: 30
+  
+  # Events to audit
+  events:
+    - config_loaded
+    - analysis_started
+    - analysis_completed
+    - test_generated
+    - test_executed
+    - test_failed
+    - readme_generated
+    - readme_updated
+    - model_request
+    - model_response
+    - error
+    - warning
+
+# ============================================================================
+# Cache Configuration
+# ============================================================================
+
+cache:
+  # Enable/disable caching
+  enabled: true
+  
+  # Cache directory
+  path: ".cache"
+  
+  # Cache TTL in hours
+  ttl: 24
+  
+  # Maximum cache size in MB
+  max_size: 500
+  
+  # What to cache
+  types:
+    - analysis_results
+    - model_responses
+    - generated_tests
+    - extracted_examples
+  
+  # Cache invalidation
+  invalidate_on:
+    - file_change
+    - config_change
+    - version_change
+
+# ============================================================================
+# Watch Mode Configuration
+# ============================================================================
+
+watch:
+  # Enable/disable watch mode by default
+  enabled: false
+  
+  # Files/directories to watch
+  paths:
+    - "."
+  
+  # Files/directories to ignore
+  ignore:
+    - ".git"
+    - "node_modules"
+    - "vendor"
+    - "testdata"
+    - "*.log"
+    - "*.tmp"
+  
+  # Watch interval in milliseconds
+  interval_ms: 500
+  
+  # Debounce delay in milliseconds
+  debounce_ms: 1000
+  
+  # Actions to trigger on change
+  actions:
+    - analyze
+    - generate_tests
+    - generate_readme
+
+# ============================================================================
+# API Configuration
+# ============================================================================
+
+api:
+  # Enable/disable API server
+  enabled: false
+  
+  # API server host
+  host: "localhost"
+  
+  # API server port
+  port: 8080
+  
+  # API key for authentication (empty = no auth)
+  api_key: ""
+  
+  # Enable HTTPS
+  tls:
+    enabled: false
+    cert_file: ""
+    key_file: ""
+  
+  # CORS settings
+  cors:
+    enabled: true
+    allowed_origins: ["*"]
+    allowed_methods: ["GET", "POST", "PUT", "DELETE"]
+    allowed_headers: ["Content-Type", "Authorization"]
+
+# ============================================================================
+# Advanced Settings
+# ============================================================================
+
+advanced:
+  # Enable experimental features
+  experimental: false
+  
+  # Debug mode (very verbose)
+  debug: false
+  
+  # Profile mode (CPU/memory profiling)
+  profile: false
+  
+  # Profile output directory
+  profile_path: "profiles"
+  
+  # Maximum file size to analyze (bytes)
+  max_file_size: 1048576  # 1MB
+  
+  # Maximum number of files to analyze
+  max_files: 1000
+  
+  # Maximum function complexity to analyze
+  max_complexity: 20
+  
+  # Skip files larger than max_file_size
+  skip_large_files: true
+  
+  # Skip binary files
+  skip_binary: true
+  
+  # File encoding
+  encoding: "utf-8"
