@@ -1,0 +1,55 @@
+{
+  "name": "nodejs-error-examples",
+  "version": "1.0.0",
+  "description": "Node.js error handling examples for testing code generation tools",
+  "keywords": [
+    "nodejs",
+    "javascript",
+    "errors",
+    "exceptions",
+    "error-handling",
+    "testing",
+    "sample-code"
+  ],
+  "homepage": "https://github.com/yourusername/spoke-tool",
+  "bugs": {
+    "url": "https://github.com/yourusername/spoke-tool/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/spoke-tool.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Your Name",
+    "email": "your.email@example.com"
+  },
+  "contributors": [
+    {
+      "name": "Spoke Tool Team"
+    }
+  ],
+  "main": "error-handling.js",
+  "files": [
+    "*.js",
+    "README.md"
+  ],
+  "directories": {
+    "lib": "."
+  },
+  "engines": {
+    "node": ">=14.0.0"
+  },
+  "scripts": {
+    "test": "node test.js",
+    "test:custom": "node -e \"require('./custom-errors'); console.log('Custom errors loaded')\"",
+    "test:async": "node -e \"require('./async-errors'); console.log('Async errors loaded')\"",
+    "test:handling": "node -e \"require('./error-handling'); console.log('Error handling loaded')\"",
+    "examples": "node examples.js"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^29.0.0"
+  },
+  "private": true
+}

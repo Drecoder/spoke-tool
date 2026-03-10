@@ -1,0 +1,71 @@
+{
+  "name": "nodejs-simple-examples",
+  "version": "1.0.0",
+  "description": "Simple Node.js examples for testing code generation tools",
+  "keywords": [
+    "nodejs",
+    "javascript",
+    "examples",
+    "testing",
+    "code-generation",
+    "sample-code",
+    "education"
+  ],
+  "homepage": "https://github.com/yourusername/spoke-tool",
+  "bugs": {
+    "url": "https://github.com/yourusername/spoke-tool/issues"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/yourusername/spoke-tool.git"
+  },
+  "license": "MIT",
+  "author": {
+    "name": "Your Name",
+    "email": "your.email@example.com"
+  },
+  "contributors": [
+    {
+      "name": "Spoke Tool Team"
+    }
+  ],
+  "main": "index.js",
+  "files": [
+    "*.js",
+    "README.md"
+  ],
+  "directories": {
+    "lib": ".",
+    "test": "test"
+  },
+  "engines": {
+    "node": ">=14.0.0",
+    "npm": ">=6.0.0"
+  },
+  "scripts": {
+    "start": "node index.js",
+    "test": "node test.js",
+    "test:math": "node -e \"require('./math'); console.log('Math module loaded')\"",
+    "test:strings": "node -e \"require('./strings'); console.log('Strings module loaded')\"",
+    "test:objects": "node -e \"require('./objects'); console.log('Objects module loaded')\"",
+    "test:async": "node -e \"require('./async'); console.log('Async module loaded')\"",
+    "examples": "node -e \"require('./index').runExamples()\"",
+    "validate": "node -e \"require('./index')\""
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "jest": "^29.0.0",
+    "mocha": "^10.0.0",
+    "chai": "^4.3.0",
+    "eslint": "^8.0.0",
+    "prettier": "^3.0.0"
+  },
+  "peerDependencies": {},
+  "optionalDependencies": {},
+  "bundledDependencies": [],
+  "private": true,
+  "publishConfig": {
+    "access": "restricted"
+  },
+  "readmeFilename": "README.md"
+}
