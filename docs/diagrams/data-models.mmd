@@ -56,7 +56,7 @@ graph TD
     
     subgraph Enum[Enumerations]
         L[Language: Go, NodeJS, Python]
-        MF[Model: CodeBERT, Gemma, DeepSeek]
+        MF[Model: CodeLLama, Gemma, CodeLLama]
         FR[Framework: go test, Jest, pytest]
         ST[Status: Passed, Failed, Skipped]
     end
@@ -80,4 +80,5 @@ graph TD
     class TF,TR,TS,TFAIL,TSUG,TCOV test
     class DC,RE,RS,EX doc
     class C,MC,TC,RC,SC config
+
     class L,MF,FR,ST enum
