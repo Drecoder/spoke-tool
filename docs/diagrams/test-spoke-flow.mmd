@@ -23,8 +23,8 @@ graph TB
     
     subgraph SLM_Test [SLM Processing]
         direction LR
-        T_Encoder[CodeBERT<br/>Code Understanding]
-        T_Gen[DeepSeek 7B<br/>Test Generation]
+        T_Encoder[CodeLLama<br/>Code Understanding]
+        T_Gen[CodeLLama 7B<br/>Test Generation]
         
         T_Encoder --> T_Gen
     end
@@ -65,8 +65,8 @@ graph TB
     
     subgraph SLM_Analysis [SLM Analysis]
         direction LR
-        F_Encoder[CodeBERT<br/>Error Context]
-        F_Analyzer[DeepSeek 7B<br/>Root Cause Analysis]
+        F_Encoder[CodeLLama<br/>Error Context]
+        F_Analyzer[CodeLLama 7B<br/>Root Cause Analysis]
         
         F_Encoder --> F_Analyzer
     end
@@ -106,4 +106,5 @@ graph TB
     class Phase1,Phase2,Phase3,Phase4 phase
     class SLM_Test,SLM_Analysis slm
     class Output output
+
     class Decision decision
