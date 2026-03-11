@@ -11,11 +11,11 @@ graph LR
         direction TB
         T_In[Code + Tests]:::input
         T_Analyze[Analyze Gaps]:::phase
-        T_SLM1[CodeBERT<br/>DeepSeek]:::slm
+        T_SLM1[CodeLLamaT<br/>DeepSeek]:::slm
         T_Generate[Generate Tests]:::phase
         T_Run[Execute]:::phase
         T_Decision{Fail?}:::decision
-        T_SLM2[DeepSeek<br/>Analysis]:::slm
+        T_SLM2[CodeLLamak<br/>Analysis]:::slm
         T_Explain[Explain Failure]:::phase
         T_Out[Tests + Report]:::output
         
@@ -54,4 +54,5 @@ graph LR
     classDef phase fill:#2ec4b6,stroke:#333,color:#333
     classDef slm fill:#8338ec,stroke:#333,color:#fff
     classDef output fill:#ff9f1c,stroke:#333,color:#333
+
     classDef decision fill:#e71d36,stroke:#333,color:#fff
