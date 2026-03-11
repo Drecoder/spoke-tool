@@ -14,10 +14,10 @@ sequenceDiagram
     
     Hub->>Test: Trigger Test Generation
     Test->>FS: Read Changed Files
-    Test->>SLM: Analyze Code (codellama:7b)
+    Test->>SLM: Analyze Code (CodeLLama)
     SLM-->>Test: Code Structure
     
-    Test->>SLM: Generate Tests (DeepSeek 7B)
+    Test->>SLM: Generate Tests (CodeLLama 7B)
     SLM-->>Test: Test Code
     
     Test->>FS: Write Test Files
@@ -28,7 +28,7 @@ sequenceDiagram
         Hub->>Readme: Trigger Doc Update
         
         Readme->>FS: Read Code + Tests
-        Readme->>SLM: Extract Examples (codellama:7b)
+        Readme->>SLM: Extract Examples (CodeLLama)
         SLM-->>Readme: Examples
         
         Readme->>SLM: Summarize API (Gemma 2B)
@@ -39,7 +39,7 @@ sequenceDiagram
         Git-->>Dev: Updated Docs
         
     else Tests Fail
-        Test->>SLM: Analyze Failure (DeepSeek 7B)
+        Test->>SLM: Analyze Failure (CodeLLama 7B)
         SLM-->>Test: Failure Explanation
         
         Test-->>Hub: Report Failures
@@ -61,4 +61,5 @@ sequenceDiagram
     Note over FS,Git: Audit Trail
     Test->>Hub: Log Test Generation
     Readme->>Hub: Log Doc Update
+
     Hub->>Hub: Write Audit Log

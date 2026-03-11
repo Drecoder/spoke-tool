@@ -41,11 +41,11 @@ The Spoke Tool is a local AI-powered development assistant that automatically ge
                           │
                           ▼
 ┌─────────────────────────────────────────────────────────────┐
-│                       SLM Pool                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  codellama:7b    │  │   Gemma 2B   │  │ DeepSeek 7B  │      │
-│  │  (Encoder)   │  │   (Fast)     │  │ (Reasoning)  │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│                       SLM Pool                              │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
+│  │  CodeLLama    │  │   Gemma 2B  │  │ CodeLLama    │       │
+│  │  (Encoder)   │  │   (Fast)     │  │ (Decoder)    │       │
+│  └──────────────┘  └──────────────┘  └──────────────┘       │
 │                    ┌──────────────┐                         │
 │                    │   Ollama     │                         │
 │                    │    Local     │                         │
@@ -360,4 +360,5 @@ squeeze:
 - [Ollama Documentation](https://ollama.ai/)
 - [codellama:7b Paper](https://arxiv.org/abs/2002.08155)
 - [DeepSeek Coder](https://github.com/deepseek-ai/DeepSeek-Coder)
+
 - [Gemma Models](https://ai.google.dev/gemma)
