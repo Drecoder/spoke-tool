@@ -24,8 +24,8 @@ graph TB
     
     subgraph SLM_Extract [SLM Processing - Extraction]
         direction LR
-        E_Encoder[CodeBERT<br/>Code Understanding]
-        E_Pattern[DeepSeek 7B<br/>Pattern Recognition]
+        E_Encoder[CodeLLama<br/>Code Understanding]
+        E_Pattern[CodeLLama 7B<br/>Pattern Recognition]
         
         E_Encoder --> E_Pattern
     end
@@ -44,7 +44,7 @@ graph TB
     
     subgraph SLM_Summarize [SLM Processing - Summarization]
         direction LR
-        S_Encoder[CodeBERT<br/>Function Understanding]
+        S_Encoder[CodeLLama<br/>Function Understanding]
         S_Summarizer[Gemma 2B<br/>API Summarization]
         
         S_Encoder --> S_Summarizer
@@ -98,4 +98,5 @@ graph TB
     class Input_Doc input
     class Phase1_Doc,Phase2_Doc,Phase3_Doc,Phase4_Doc phase
     class SLM_Extract,SLM_Summarize slm
+
     class Output_Doc output
