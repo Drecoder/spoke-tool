@@ -6,7 +6,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/yourusername/spoke-tool/api/types"
+	"example.com/spoke-tool/api/types"
 )
 
 // TestTemplates provides language-specific test generation templates
@@ -81,6 +81,9 @@ type TestCaseData struct {
 
 	// Teardown specific to this test
 	Teardown string
+
+	// Sub-tests for table-driven or parameterized tests
+	SubTests []TestCaseData
 }
 
 // MockData represents a mock dependency

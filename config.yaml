@@ -52,11 +52,11 @@ log:
 # ============================================================================
 
 models:
-  # Encoder model for code understanding (CodeBERT)
-  encoder: "codebert"
+  # Encoder model for code understanding (CodeLLama)
+  encoder: "codellama:7b"
   
   # Decoder model for complex tasks (test generation, error analysis)
-  decoder: "deepseek-coder:7b"
+  decoder: "codellama:7b"
   
   # Fast model for simple tasks (documentation generation)
   fast: "gemma2:2b"

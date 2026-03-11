@@ -9,7 +9,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/yourusername/spoke-tool/api/types"
+	"example.com/spoke-tool/api/types"
+	apitypes "example.com/spoke-tool/api/types"
 )
 
 // SignatureExtractor extracts function and type signatures from code
@@ -114,7 +115,7 @@ type TypeSignature struct {
 	Kind string `json:"kind"`
 
 	// Language
-	Language types.Language `json:"language"`
+	Language apitypes.Language `json:"language"`
 
 	// Fields (for structs/classes)
 	Fields []*Field `json:"fields,omitempty"`
@@ -205,6 +206,7 @@ func (s *SignatureExtractor) ExtractFromGo(content string, filePath string) ([]*
 
 // ExtractFromNodeJS extracts signatures from Node.js/JavaScript code
 func (s *SignatureExtractor) ExtractFromNodeJS(content string, filePath string) ([]*FunctionSignature, []*TypeSignature, error) {
+	fmt.Printf("Types package: %T\n", apitypes.NodeJS)
 	var functions []*FunctionSignature
 	var types []*TypeSignature
 
@@ -222,7 +224,7 @@ func (s *SignatureExtractor) ExtractFromNodeJS(content string, filePath string) 
 		if matches := funcRegex.FindStringSubmatch(line); len(matches) > 1 {
 			fn := &FunctionSignature{
 				Name:       matches[1],
-				Language:   types.NodeJS,
+				Language:   apitypes.NodeJS,
 				Parameters: []*Parameter{},
 				Returns:    []*ReturnType{},
 				FilePath:   filePath,
@@ -251,7 +253,7 @@ func (s *SignatureExtractor) ExtractFromNodeJS(content string, filePath string) 
 			ts := &TypeSignature{
 				Name:       matches[1],
 				Kind:       "class",
-				Language:   types.NodeJS,
+				Language:   apitypes.NodeJS,
 				Fields:     []*Field{},
 				Methods:    []*FunctionSignature{},
 				FilePath:   filePath,
@@ -299,7 +301,7 @@ func (s *SignatureExtractor) ExtractFromPython(content string, filePath string) 
 		if matches := funcRegex.FindStringSubmatch(line); len(matches) > 1 {
 			fn := &FunctionSignature{
 				Name:       matches[1],
-				Language:   types.Python,
+				Language:   apitypes.Python,
 				Parameters: []*Parameter{},
 				Returns:    []*ReturnType{},
 				FilePath:   filePath,
@@ -328,7 +330,7 @@ func (s *SignatureExtractor) ExtractFromPython(content string, filePath string) 
 			ts := &TypeSignature{
 				Name:       matches[1],
 				Kind:       "class",
-				Language:   types.Python,
+				Language:   apitypes.Python,
 				Fields:     []*Field{},
 				Methods:    []*FunctionSignature{},
 				FilePath:   filePath,
@@ -352,13 +354,13 @@ func (s *SignatureExtractor) ExtractFromPython(content string, filePath string) 
 }
 
 // ExtractSignatures automatically detects language and extracts signatures
-func (s *SignatureExtractor) ExtractSignatures(content string, filePath string, lang types.Language) ([]*FunctionSignature, []*TypeSignature, error) {
+func (s *SignatureExtractor) ExtractSignatures(content string, filePath string, lang apitypes.Language) ([]*FunctionSignature, []*TypeSignature, error) {
 	switch lang {
-	case types.Go:
+	case apitypes.Go:
 		return s.ExtractFromGo(content, filePath)
-	case types.NodeJS:
+	case apitypes.NodeJS:
 		return s.ExtractFromNodeJS(content, filePath)
-	case types.Python:
+	case apitypes.Python:
 		return s.ExtractFromPython(content, filePath)
 	default:
 		return nil, nil, fmt.Errorf("unsupported language: %s", lang)
@@ -370,7 +372,7 @@ func (s *SignatureExtractor) ExtractSignatures(content string, filePath string, 
 func (s *SignatureExtractor) extractGoFunction(fn *ast.FuncDecl, fset *token.FileSet, filePath string) *FunctionSignature {
 	sig := &FunctionSignature{
 		Name:       fn.Name.Name,
-		Language:   types.Go,
+		Language:   apitypes.Go,
 		Parameters: []*Parameter{},
 		Returns:    []*ReturnType{},
 		FilePath:   filePath,
@@ -422,7 +424,7 @@ func (s *SignatureExtractor) extractGoFunction(fn *ast.FuncDecl, fset *token.Fil
 func (s *SignatureExtractor) extractGoType(typeSpec *ast.TypeSpec, fset *token.FileSet, filePath string, node *ast.File) *TypeSignature {
 	ts := &TypeSignature{
 		Name:       typeSpec.Name.Name,
-		Language:   types.Go,
+		Language:   apitypes.Go,
 		Fields:     []*Field{},
 		Methods:    []*FunctionSignature{},
 		FilePath:   filePath,

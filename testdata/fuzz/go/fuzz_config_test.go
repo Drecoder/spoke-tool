@@ -6,7 +6,7 @@ package fuzz
 import (
 	"testing"
 
-	"github.com/yourusername/spoke-tool/internal/config"
+	"example.com/spoke-tool/internal/config"
 )
 
 // FuzzConfigParsing tests the config parser with various inputs

@@ -3,11 +3,12 @@ package doc
 import (
 	"bytes"
 	"fmt"
+	"regexp"
 	"strings"
 	"text/template"
 
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/internal/common"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/internal/common"
 )
 
 // Formatter handles formatting extracted content into markdown
@@ -75,22 +76,26 @@ func NewFormatter(config FormatterConfig) *Formatter {
 		config.HeadingStyle = "##"
 	}
 
-	return &Formatter{
+	f := &Formatter{
 		config:      config,
 		stringUtils: &common.StringUtils{},
-		templateFunc: template.FuncMap{
-			"lower":    strings.ToLower,
-			"upper":    strings.ToUpper,
-			"title":    strings.Title,
-			"trim":     strings.TrimSpace,
-			"now":      common.Times.FormatDuration,
-			"code":     e.formatCodeBlock,
-			"table":    e.formatTable,
-			"badge":    e.formatBadge,
-			"link":     e.formatLink,
-			"plural":   e.pluralize,
-		},
+		templateFunc: template.FuncMap{},
 	}
+
+	f.templateFunc = template.FuncMap{
+		"lower":    strings.ToLower,
+		"upper":    strings.ToUpper,
+		"title":    strings.Title,
+		"trim":     strings.TrimSpace,
+		"now":      common.Times.FormatDuration,
+		"code":     f.formatCodeBlock,
+		"table":    f.formatTable,
+		"badge":    f.formatBadge,
+		"link":     f.formatLink,
+		"plural":   f.pluralize,
+	}
+
+	return f
 }
 
 // FormatReadme formats a complete README from extracted content
@@ -321,8 +326,7 @@ We love contributions! Here's how you can help:
 
 ### Development Setup
 
-\`\`\`bash
-# Clone the repository
+` + "```bash\n" + `# Clone the repository
 git clone https://github.com/yourusername/project.git
 
 # Install dependencies
@@ -330,7 +334,7 @@ git clone https://github.com/yourusername/project.git
 
 # Run tests
 # [Test command]
-\`\`\`
+` + "```" + `
 
 ### Code Style
 
@@ -356,10 +360,11 @@ func (f *Formatter) FormatLicense(license string) (string, error) {
 		license = "MIT"
 	}
 
-	return fmt.Sprintf(`## License
+	result := fmt.Sprintf(`## License
 
 This project is licensed under the %s License - see the [LICENSE](LICENSE) file for details.
-`, license), nil
+`, license)
+	return result, nil
 }
 
 // Helper methods

@@ -1,4 +1,3 @@
-cat > cmd/testgen/main.go << 'EOF'
 package main
 
 import (
@@ -7,32 +6,31 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"runtime"
 	"time"
 
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/cmd/shared"
-	"github.com/yourusername/spoke-tool/internal/config"
-	"github.com/yourusername/spoke-tool/internal/model"
-	"github.com/yourusername/spoke-tool/internal/test"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/cmd/shared"
+	"example.com/spoke-tool/internal/config"
+	"example.com/spoke-tool/internal/model"
+	"example.com/spoke-tool/internal/test"
 )
 
 var (
 	// CLI flags
-	configPath   = flag.String("config", "config.yaml", "Path to config file")
-	projectPath  = flag.String("path", ".", "Path to project root")
-	watch        = flag.Bool("watch", false, "Watch for changes")
-	force        = flag.Bool("force", false, "Force regenerate all tests")
-	runTests     = flag.Bool("run", true, "Run tests after generation")
-	coverage     = flag.Bool("coverage", false, "Check coverage after tests")
-	threshold    = flag.Float64("threshold", 80.0, "Coverage threshold percentage")
-	verbose      = flag.Bool("verbose", false, "Verbose output")
-	version      = flag.Bool("version", false, "Show version")
-	logLevel     = flag.String("log-level", "info", "Log level (error, warn, info, debug, trace)")
-	timeout      = flag.Duration("timeout", 10*time.Minute, "Timeout for operations")
-	language     = flag.String("lang", "", "Specific language to target (go, nodejs, python)")
-	
+	configPath  = flag.String("config", "config.yaml", "Path to config file")
+	projectPath = flag.String("path", ".", "Path to project root")
+	watch       = flag.Bool("watch", false, "Watch for changes")
+	force       = flag.Bool("force", false, "Force regenerate all tests")
+	runTests    = flag.Bool("run", true, "Run tests after generation")
+	coverage    = flag.Bool("coverage", false, "Check coverage after tests")
+	threshold   = flag.Float64("threshold", 80.0, "Coverage threshold percentage")
+	verbose     = flag.Bool("verbose", false, "Verbose output")
+	version     = flag.Bool("version", false, "Show version")
+	logLevel    = flag.String("log-level", "info", "Log level (error, warn, info, debug, trace)")
+	timeout     = flag.Duration("timeout", 10*time.Minute, "Timeout for operations")
+	language    = flag.String("lang", "", "Specific language to target (go, nodejs, python)")
+
 	// Version info (set at build time)
 	Version = "dev"
 	Commit  = "none"
@@ -140,36 +138,24 @@ func run(flags *shared.CommandFlags, versionInfo shared.VersionInfo) error {
 	} else {
 		for modelType, available := range status {
 			if !available {
-				log.Printf("Warning: Model %s not available. Run: ollama pull %s", 
+				log.Printf("Warning: Model %s not available. Run: ollama pull %s",
 					modelType, getModelName(modelType, cfg))
 			}
 		}
 	}
 
 	// Parse target language if specified
-	var targetLang types.Language
-	if *language != "" {
-		switch *language {
-		case "go":
-			targetLang = types.Go
-		case "nodejs", "js":
-			targetLang = types.NodeJS
-		case "python", "py":
-			targetLang = types.Python
-		default:
-			log.Printf("Warning: Unknown language %s, will auto-detect", *language)
-		}
-	}
+	targetLang := getTargetLanguage(*language)
 
 	// Initialize test generator
 	testGen := test.NewGenerator(test.GeneratorConfig{
-		ModelClient:      modelClient,
-		ProjectRoot:      cfg.ProjectRoot,
-		AutoRunTests:     *runTests,
-		CheckCoverage:    *coverage,
+		ModelClient:       modelClient,
+		ProjectRoot:       cfg.ProjectRoot,
+		AutoRunTests:      *runTests,
+		CheckCoverage:     *coverage,
 		CoverageThreshold: cfg.TestSpoke.CoverageThreshold,
-		TargetLanguage:   targetLang,
-		Verbose:          flags.Verbose,
+		TargetLanguage:    targetLang,
+		Verbose:           flags.Verbose,
 	})
 
 	// Track statistics
@@ -182,21 +168,21 @@ func run(flags *shared.CommandFlags, versionInfo shared.VersionInfo) error {
 		runWatch(ctx, testGen, cfg, stats)
 	} else {
 		log.Printf("Generating tests for %s", cfg.ProjectRoot)
-		result, err := runOnce(ctx, testGen, cfg, flags.Force, stats)
+		result, err := runOnce(ctx, testGen, cfg, flags.Force, stats, targetLang)
 		if err != nil {
 			return fmt.Errorf("generation failed: %w", err)
 		}
-		
+
 		stats.TotalDuration = time.Since(startTime)
-		
+
 		// Print stats if verbose
 		if flags.Verbose {
 			printStats(stats)
 			printTestSummary(result)
 		}
-		
+
 		log.Printf("Test generation complete: %s", result.Message)
-		
+
 		// Exit with appropriate code
 		if !result.Success {
 			os.Exit(int(result.ExitCode))
@@ -228,9 +214,9 @@ func initModelClient(cfg *types.Config) (*model.Client, error) {
 		OllamaHost: "http://localhost:11434",
 		Timeout:    30 * time.Second,
 		Models: map[model.ModelType]string{
-			model.CodeBERT:   cfg.Models.Encoder,
-			model.Gemma2B:    cfg.Models.Fast,
-			model.DeepSeek7B: cfg.Models.Decoder,
+			model.CodeLLamaEncoder: cfg.Models.Encoder, // CodeLLama as encoder
+			model.Gemma2BChat:      cfg.Models.Fast,    // Gemma2 as fast
+			model.CodeLLamaDecoder: cfg.Models.Decoder,
 		},
 	}
 
@@ -251,8 +237,26 @@ func getModelName(modelType model.ModelType, cfg *types.Config) string {
 	}
 }
 
+// getTargetLanguage parses the language flag
+func getTargetLanguage(langFlag string) types.Language {
+	if langFlag == "" {
+		return ""
+	}
+	switch langFlag {
+	case "go":
+		return types.Go
+	case "nodejs", "js":
+		return types.NodeJS
+	case "python", "py":
+		return types.Python
+	default:
+		log.Printf("Warning: Unknown language %s, will auto-detect", langFlag)
+		return ""
+	}
+}
+
 // runOnce performs a single test generation
-func runOnce(ctx context.Context, gen *test.Generator, cfg *types.Config, force bool, stats *shared.Stats) (*test.GenerationResult, error) {
+func runOnce(ctx context.Context, gen *test.Generator, cfg *types.Config, force bool, stats *shared.Stats, targetLang types.Language) (*test.GenerationResult, error) {
 	// Analyze project for functions without tests
 	analysisStart := time.Now()
 	analysis, err := gen.AnalyzeProject(ctx)
@@ -303,27 +307,35 @@ func runOnce(ctx context.Context, gen *test.Generator, cfg *types.Config, force 
 			log.Printf("Warning: Tests failed to run: %v", err)
 		} else {
 			result.TestResults = testResults
-			
+
 			// Check if any tests failed
 			if testResults.Failed > 0 {
 				log.Printf("⚠️  %d tests failed", testResults.Failed)
 				result.Success = false
 				result.Message = fmt.Sprintf("%d tests failed", testResults.Failed)
 				result.ExitCode = shared.ExitCodeGenerationError
-				
-				// Analyze failures (but don't fix)
-				for _, failure := range testResults.Failures {
-					analysis, err := gen.AnalyzeFailure(ctx, failure)
-					if err != nil {
-						log.Printf("Failed to analyze failure: %v", err)
-					} else {
-						log.Printf("Failure analysis for %s:\n%s", failure.TestName, analysis)
+
+				// Analyze failures by iterating through Results (not Failures)
+				for _, testResult := range testResults.Results {
+					if testResult.Status == types.TestStatusFailed {
+						// Convert TestResult to TestFailure
+						failure := &types.TestFailure{
+							TestName: testResult.Name,
+							ErrorMsg: testResult.Error,
+							Language: targetLang,
+						}
+						analysis, err := gen.AnalyzeFailure(ctx, &testResult)
+						if err != nil {
+							log.Printf("Failed to analyze failure: %v", err)
+						} else {
+							log.Printf("Failure analysis for %s:\n%s", failure.TestName, analysis)
+						}
 					}
 				}
 			} else {
 				log.Printf("✅ All %d tests passed", testResults.Passed)
 			}
-			
+
 			// Check coverage if requested
 			if *coverage && testResults.Passed == testResults.Total {
 				coverage, err := gen.CheckCoverage(ctx)
@@ -332,9 +344,9 @@ func runOnce(ctx context.Context, gen *test.Generator, cfg *types.Config, force 
 				} else {
 					result.Coverage = coverage
 					log.Printf("Coverage: %.1f%%", coverage.Overall)
-					
+
 					if coverage.Overall < cfg.TestSpoke.CoverageThreshold {
-						log.Printf("⚠️  Coverage below threshold: %.1f%% < %.1f%%", 
+						log.Printf("⚠️  Coverage below threshold: %.1f%% < %.1f%%",
 							coverage.Overall, cfg.TestSpoke.CoverageThreshold)
 					}
 				}
@@ -383,9 +395,10 @@ func runWatch(ctx context.Context, gen *test.Generator, cfg *types.Config, stats
 			}
 
 			log.Printf("Found %d functions needing tests, regenerating...", len(needsTests))
-			
+
 			// Generate and run tests
-			result, err := runOnce(ctx, gen, cfg, true, stats)
+			targetLang := gen.Config().TargetLanguage
+			result, err := runOnce(ctx, gen, cfg, true, stats, targetLang)
 			if err != nil {
 				log.Printf("Generation failed: %v", err)
 				continue
@@ -435,22 +448,24 @@ func printTestSummary(result *test.GenerationResult) {
 	if result.TestResults == nil {
 		return
 	}
-	
+
 	log.Printf("=== Test Results ===")
 	log.Printf("Total:  %d", result.TestResults.Total)
 	log.Printf("Passed: %d ✅", result.TestResults.Passed)
 	log.Printf("Failed: %d ❌", result.TestResults.Failed)
 	log.Printf("Skipped: %d ⏭️", result.TestResults.Skipped)
-	
+
 	if result.Coverage != nil {
 		log.Printf("Coverage: %.1f%%", result.Coverage.Overall)
 	}
-	
-	if len(result.TestResults.Failures) > 0 {
+
+	// Show failures by iterating through Results
+	if result.TestResults.Failed > 0 {
 		log.Printf("=== Failures ===")
-		for _, failure := range result.TestResults.Failures {
-			log.Printf("  %s: %s", failure.TestName, failure.Error)
+		for _, test := range result.TestResults.Results {
+			if test.Status == types.TestStatusFailed {
+				log.Printf("  %s: %s", test.Name, test.Error)
+			}
 		}
 	}
 }
-EOF

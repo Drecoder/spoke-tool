@@ -4,23 +4,23 @@ package types
 type TestFramework string
 
 const (
-	TestFrameworkGoTest  TestFramework = "go test"
-	TestFrameworkJest    TestFramework = "jest"
-	TestFrameworkMocha   TestFramework = "mocha"
-	TestFrameworkPytest  TestFramework = "pytest"
+	TestFrameworkGoTest   TestFramework = "go test"
+	TestFrameworkJest     TestFramework = "jest"
+	TestFrameworkMocha    TestFramework = "mocha"
+	TestFrameworkPytest   TestFramework = "pytest"
 	TestFrameworkUnittest TestFramework = "unittest"
 )
 
 // TestFile represents a test file
 type TestFile struct {
-	Path        string        `json:"path"`
-	Language    Language      `json:"language"`
-	Content     string        `json:"content"`
-	Framework   TestFramework `json:"framework"`
-	Functions   []string      `json:"functions_tested"` // Functions this file tests
-	Coverage    float64       `json:"coverage,omitempty"`
-	LastRun     string        `json:"last_run,omitempty"`
-	LastStatus  TestStatus    `json:"last_status,omitempty"`
+	Path       string        `json:"path"`
+	Language   Language      `json:"language"`
+	Content    string        `json:"content"`
+	Framework  TestFramework `json:"framework"`
+	Functions  []string      `json:"functions_tested"` // Functions this file tests
+	Coverage   float64       `json:"coverage,omitempty"`
+	LastRun    string        `json:"last_run,omitempty"`
+	LastStatus TestStatus    `json:"last_status,omitempty"`
 }
 
 // TestStatus represents the status of a test run
@@ -45,15 +45,16 @@ type TestResult struct {
 
 // TestSuite represents a collection of test results
 type TestSuite struct {
-	File      string       `json:"file"`
+	File      string        `json:"file"`
 	Framework TestFramework `json:"framework"`
-	Results   []TestResult `json:"results"`
-	Total     int          `json:"total"`
-	Passed    int          `json:"passed"`
-	Failed    int          `json:"failed"`
-	Skipped   int          `json:"skipped"`
-	Duration  string       `json:"duration_ms"`
-	Timestamp string       `json:"timestamp"`
+	Results   []TestResult  `json:"results"`
+	Total     int           `json:"total"`
+	Passed    int           `json:"passed"`
+	Failed    int           `json:"failed"`
+	Skipped   int           `json:"skipped"`
+	Duration  string        `json:"duration_ms"`
+	Timestamp string        `json:"timestamp"`
+	TestCases []*TestResult `json:"test_cases"`
 }
 
 // TestSuggestion represents a generated test suggestion
@@ -70,10 +71,20 @@ type TestSuggestion struct {
 
 // TestCoverage represents code coverage information
 type TestCoverage struct {
-	Language    Language          `json:"language"`
-	Overall     float64           `json:"overall_percent"`
-	ByFile      map[string]float64 `json:"by_file"`
-	ByFunction  map[string]float64 `json:"by_function"`
-	Uncovered   []string          `json:"uncovered_lines"` // Lines without coverage
-	Timestamp   string            `json:"timestamp"`
+	Language   Language           `json:"language"`
+	Overall    float64            `json:"overall_percent"`
+	ByFile     map[string]float64 `json:"by_file"`
+	ByFunction map[string]float64 `json:"by_function"`
+	Uncovered  []string           `json:"uncovered_lines"` // Lines without coverage
+	Timestamp  string             `json:"timestamp"`
+}
+
+// TestFailure represents a test failure
+type TestFailure struct {
+	Language   Language `json:"language"`
+	TestName   string   `json:"test_name"`
+	ErrorMsg   string   `json:"error_msg"`
+	TestCode   string   `json:"test_code,omitempty"`
+	SourceCode string   `json:"source_code,omitempty"`
+	Framework  string   `json:"framework,omitempty"`
 }

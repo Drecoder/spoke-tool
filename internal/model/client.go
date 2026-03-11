@@ -3,31 +3,43 @@ package model
 import (
 	"context"
 	"fmt"
+	"net/http"
+	"net/url"
 	"strings"
 	"time"
 
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/internal/common"
 	"github.com/google/uuid"
-	ollama "github.com/ollama/ollama/client"
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/internal/common"
+	"github.com/ollama/ollama/api"
 )
 
 const (
-	// Encoder models for code understanding
-	CodeBERT ModelType = "codebert"
-
-	// Decoder models
-	Gemma2B    ModelType = "gemma2:2b"         // Fast, lightweight generation for docs
-	DeepSeek7B ModelType = "deepseek-coder:7b" // Complex reasoning for tests
+	CodeLLamaEncoder ModelType = "codellama-encoder" // For encoder role
+	CodeLLamaDecoder ModelType = "codellama-decoder" // For decoder role
+	Gemma2BChat      ModelType = "gemma2:2b"
 )
 
+// SLMRequest represents a request to an SLM
+type SLMRequest struct {
+	ID          string                 `json:"id"`
+	Model       ModelType              `json:"model"`
+	Language    types.Language         `json:"language"`
+	Prompt      string                 `json:"prompt"`
+	System      string                 `json:"system,omitempty"`
+	Context     []int                  `json:"context,omitempty"`
+	Options     map[string]interface{} `json:"options,omitempty"`
+	Temperature float32                `json:"temperature,omitempty"`
+	MaxTokens   int                    `json:"max_tokens,omitempty"`
+	Timestamp   time.Time              `json:"timestamp"`
+}
+
 // Client handles communication with Ollama SLMs
-// This client ONLY handles model communication - no business logic
 type Client struct {
-	ollamaClient ollama.Client
-	modelMap     map[ModelType]string
-	timeout      time.Duration
-	logger       *common.Logger
+	client   *api.Client
+	modelMap map[ModelType]string
+	timeout  time.Duration
+	logger   *common.Logger
 }
 
 // ClientConfig holds configuration for the model client
@@ -35,15 +47,6 @@ type ClientConfig struct {
 	OllamaHost string
 	Timeout    time.Duration
 	Models     map[ModelType]string
-}
-
-
-// ModelStatus represents the status of a model
-type ModelStatus struct {
-	Name      string    `json:"name"`
-	Available bool      `json:"available"`
-	Size      string    `json:"size,omitempty"`
-	Modified  time.Time `json:"modified,omitempty"`
 }
 
 // NewClient creates a new SLM client
@@ -55,33 +58,40 @@ func NewClient(config ClientConfig) (*Client, error) {
 		config.Timeout = 30 * time.Second
 	}
 
-	// Create Ollama client
-	client, err := ollama.NewClient(config.OllamaHost)
+	// Parse URL
+	url, err := url.Parse(config.OllamaHost)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create Ollama client: %w", err)
+		return nil, fmt.Errorf("failed to parse Ollama host: %w", err)
 	}
+
+	// Create HTTP client with timeout
+	httpClient := &http.Client{
+		Timeout: config.Timeout,
+	}
+
+	// Create Ollama client
+	client := api.NewClient(url, httpClient)
 
 	// Default model mapping
 	modelMap := config.Models
 	if modelMap == nil {
 		modelMap = map[ModelType]string{
-			CodeBERT:   "codebert",
-			Gemma2B:    "gemma2:2b",
-			DeepSeek7B: "deepseek-coder:7b",
+			CodeLLamaEncoder: "codellama:7b",
+			CodeLLamaDecoder: "codellama:7b",
+			Gemma2BChat:      "gemma2:2b",
 		}
 	}
 
 	return &Client{
-		ollamaClient: client,
-		modelMap:     modelMap,
-		timeout:      config.Timeout,
-		logger:       common.GetLogger().WithField("component", "model-client"),
+		client:   client,
+		modelMap: modelMap,
+		timeout:  config.Timeout,
+		logger:   common.GetLogger().WithField("component", "model-client"),
 	}, nil
 }
 
 // Generate sends a prompt to the specified model and returns the response
-// This is the core method - all other methods build on this
-func (c *Client) Generate(ctx context.Context, req Request) (*Response, error) {
+func (c *Client) Generate(ctx context.Context, req SLMRequest) (*Response, error) {
 	// Set defaults
 	if req.ID == "" {
 		req.ID = uuid.New().String()
@@ -117,16 +127,6 @@ func (c *Client) Generate(ctx context.Context, req Request) (*Response, error) {
 	// Prepare request
 	start := time.Now()
 
-	// Build options
-	options := map[string]interface{}{
-		"temperature": req.Temperature,
-		"num_predict": req.MaxTokens,
-	}
-	// Merge custom options
-	for k, v := range req.Options {
-		options[k] = v
-	}
-
 	// Generate
 	resp := &Response{
 		ID:        uuid.New().String(),
@@ -136,16 +136,20 @@ func (c *Client) Generate(ctx context.Context, req Request) (*Response, error) {
 		Timestamp: time.Now(),
 	}
 
-	var fullResponse strings.Builder
-	var tokens int
-
-	err := c.ollamaClient.Generate(ctx, &ollama.GenerateRequest{
+	// Create generate request
+	genReq := &api.GenerateRequest{
 		Model:   modelName,
 		Prompt:  req.Prompt,
 		System:  req.System,
-		Context: req.Context,
-		Options: options,
-	}, func(response ollama.GenerateResponse) error {
+		Options: req.Options,
+	}
+
+	// For streaming response
+	var fullResponse strings.Builder
+	var tokens int
+
+	// Call generate with a callback for streaming
+	err := c.client.Generate(ctx, genReq, func(response api.GenerateResponse) error {
 		fullResponse.WriteString(response.Response)
 		tokens += len(strings.Fields(response.Response))
 		resp.Done = response.Done
@@ -171,26 +175,12 @@ func (c *Client) Generate(ctx context.Context, req Request) (*Response, error) {
 	return resp, nil
 }
 
-// GenerateWithTemplate uses a template to create the prompt
-// Convenience method for common patterns
-func (c *Client) GenerateWithTemplate(ctx context.Context, model ModelType, template string, args ...interface{}) (*Response, error) {
-	prompt := fmt.Sprintf(template, args...)
-
-	req := Request{
-		Model:  model,
-		Prompt: prompt,
-	}
-
-	return c.Generate(ctx, req)
-}
-
 // CheckModels verifies that required models are available
-// Returns status map and any missing models
 func (c *Client) CheckModels(ctx context.Context) (map[ModelType]bool, error) {
 	status := make(map[ModelType]bool)
 
 	// List available models
-	models, err := c.ollamaClient.List(ctx)
+	models, err := c.client.List(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("failed to list models: %w", err)
 	}
@@ -203,138 +193,26 @@ func (c *Client) CheckModels(ctx context.Context) (map[ModelType]bool, error) {
 	}
 
 	// Check each required model
-	missing := []string{}
 	for modelType, modelName := range c.modelMap {
 		status[modelType] = available[modelName]
 		if !available[modelName] {
-			missing = append(missing, string(modelName))
+			c.logger.Warn("Model not available", "model", modelName)
 		}
 	}
 
-	if len(missing) > 0 {
-		c.logger.Warn("Some models are not available", "missing", missing)
-	}
-
 	return status, nil
-}
-
-// PullModel pulls a model from Ollama if not already present
-// This is an optional convenience method
-func (c *Client) PullModel(ctx context.Context, modelType ModelType) error {
-	modelName, ok := c.modelMap[modelType]
-	if !ok {
-		return fmt.Errorf("unknown model type: %s", modelType)
-	}
-
-	// Check if already present
-	status, err := c.CheckModels(ctx)
-	if err != nil {
-		return err
-	}
-
-	if status[modelType] {
-		c.logger.Info("Model already available", "model", modelName)
-		return nil // Already present
-	}
-
-	c.logger.Info("Pulling model", "model", modelName, "this may take a while")
-
-	// Pull the model
-	err = c.ollamaClient.Pull(ctx, modelName, nil)
-	if err != nil {
-		return fmt.Errorf("failed to pull model %s: %w", modelName, err)
-	}
-
-	c.logger.Info("Model pulled successfully", "model", modelName)
-	return nil
 }
 
 // ListModels returns all available models
-func (c *Client) ListModels(ctx context.Context) ([]ModelStatus, error) {
-	models, err := c.ollamaClient.List(ctx)
+func (c *Client) ListModels(ctx context.Context) ([]api.ListModelResponse, error) {
+	resp, err := c.client.List(ctx)
 	if err != nil {
 		return nil, err
 	}
-
-	var status []ModelStatus
-	for _, m := range models.Models {
-		status = append(status, ModelStatus{
-			Name:      m.Name,
-			Available: true,
-			Size:      formatSize(m.Size),
-			Modified:  m.ModifiedAt,
-		})
-	}
-
-	return status, nil
-}
-
-// GetModelInfo returns information about a specific model
-func (c *Client) GetModelInfo(ctx context.Context, modelType ModelType) (*ModelStatus, error) {
-	models, err := c.ListModels(ctx)
-	if err != nil {
-		return nil, err
-	}
-
-	modelName := c.modelMap[modelType]
-	for _, m := range models {
-		if m.Name == modelName {
-			return &m, nil
-		}
-	}
-
-	return &ModelStatus{
-		Name:      modelName,
-		Available: false,
-	}, nil
-}
-
-// TestConnection tests the connection to Ollama
-func (c *Client) TestConnection(ctx context.Context) error {
-	_, err := c.ollamaClient.List(ctx)
-	if err != nil {
-		return fmt.Errorf("failed to connect to Ollama: %w", err)
-	}
-	c.logger.Info("Successfully connected to Ollama")
-	return nil
+	return resp.Models, nil
 }
 
 // Close cleans up any resources
 func (c *Client) Close() error {
-	// Ollama client doesn't need explicit close
-	// But we keep this method for interface consistency
 	return nil
 }
-
-// Helper functions
-
-// formatSize formats byte size to human readable
-func formatSize(bytes int64) string {
-	const unit = 1024
-	if bytes < unit {
-		return fmt.Sprintf("%d B", bytes)
-	}
-	div, exp := int64(unit), 0
-	for n := bytes / unit; n >= unit; n /= unit {
-		div *= unit
-		exp++
-	}
-	return fmt.Sprintf("%.1f %cB", float64(bytes)/float64(div), "KMGTPE"[exp])
-}
-
-// IsRetryableError determines if an error can be retried
-func IsRetryableError(err error) bool {
-	if err == nil {
-		return false
-	}
-
-	// Connection errors are retryable
-	if strings.Contains(err.Error(), "connection") ||
-		strings.Contains(err.Error(), "timeout") ||
-		strings.Contains(err.Error(), "refused") {
-		return true
-	}
-
-	return false
-}
-

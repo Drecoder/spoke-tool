@@ -11,7 +11,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/yourusername/spoke-tool/api/types"
+	"example.com/spoke-tool/api/types"
 )
 
 // CoverageAnalyzer provides test coverage analysis

@@ -6,8 +6,8 @@ package fuzz
 import (
 	"testing"
 
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/internal/test"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/internal/test"
 )
 
 // FuzzCodeAnalysis tests the code analyzer with various inputs

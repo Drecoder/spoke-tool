@@ -4,8 +4,8 @@ import (
 	"path/filepath"
 	"testing"
 
-	"spoke-tool/types"
-	"spoke-tool/model"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/internal/model"
 )
 
 func TestLoadConfig(t *testing.T) {

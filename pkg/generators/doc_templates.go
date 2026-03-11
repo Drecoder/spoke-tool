@@ -5,7 +5,7 @@ import (
 	"strings"
 	"text/template"
 
-	"github.com/yourusername/spoke-tool/api/types"
+	"example.com/spoke-tool/api/types"
 )
 
 // DocTemplates provides language-specific documentation templates

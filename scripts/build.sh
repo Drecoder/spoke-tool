@@ -99,7 +99,7 @@ build_tool() {
     # Add verbosity
     if [[ "$VERBOSE" == "true" ]]; then
         echo -e "${CYAN}Running: $cmd${NC}"
-        eval "$cmd -x"
+        eval "$cmd -v"
     else
         eval "$cmd" 2>&1 | grep -v '^#' || exit 1
     fi

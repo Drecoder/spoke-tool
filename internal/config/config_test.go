@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/yourusername/spoke-tool/api/types"
+	"example.com/spoke-tool/api/types"
 )
 
 func TestDefaultConfig(t *testing.T) {

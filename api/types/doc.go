@@ -16,25 +16,27 @@ type DocSection string
 
 const (
 	DocSectionTitle        DocSection = "title"
+	DocSectionDescription  DocSection = "description"
 	DocSectionInstallation DocSection = "installation"
 	DocSectionQuickStart   DocSection = "quickstart"
 	DocSectionAPI          DocSection = "api"
 	DocSectionExamples     DocSection = "examples"
 	DocSectionContributing DocSection = "contributing"
 	DocSectionLicense      DocSection = "license"
+	DocSectionCustom       DocSection = "custom"
 )
 
 // DocContent represents generated documentation content
 type DocContent struct {
-	Language    Language      `json:"language"`
-	Function    string        `json:"function,omitempty"`
-	Class       string        `json:"class,omitempty"`
-	Format      DocFormat     `json:"format"`
-	Content     string        `json:"content"`
-	Examples    []DocExample  `json:"examples,omitempty"`
-	Parameters  []DocParam    `json:"parameters,omitempty"`
-	Returns     string        `json:"returns,omitempty"`
-	Exceptions  []string      `json:"exceptions,omitempty"`
+	Language   Language     `json:"language"`
+	Function   string       `json:"function,omitempty"`
+	Class      string       `json:"class,omitempty"`
+	Format     DocFormat    `json:"format"`
+	Content    string       `json:"content"`
+	Examples   []DocExample `json:"examples,omitempty"`
+	Parameters []DocParam   `json:"parameters,omitempty"`
+	Returns    string       `json:"returns,omitempty"`
+	Exceptions []string     `json:"exceptions,omitempty"`
 }
 
 // DocParam represents a function parameter in documentation
@@ -48,10 +50,10 @@ type DocParam struct {
 
 // DocExample represents a code example in documentation
 type DocExample struct {
-	Language Language `json:"language"`
-	Code     string   `json:"code"`
-	Description string `json:"description,omitempty"`
-	IsTest    bool    `json:"is_test"` // Whether this comes from a test
+	Language    Language `json:"language"`
+	Code        string   `json:"code"`
+	Description string   `json:"description,omitempty"`
+	IsTest      bool     `json:"is_test"` // Whether this comes from a test
 }
 
 // ReadmeSection represents a section in the README

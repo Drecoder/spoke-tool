@@ -6,9 +6,9 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/internal/common"
-	"github.com/yourusername/spoke-tool/internal/model"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/internal/common"
+	"example.com/spoke-tool/internal/model"
 )
 
 // Summarizer handles generating human-readable summaries from code
@@ -143,7 +143,7 @@ func (s *Summarizer) SummarizeFunction(ctx context.Context, fn *types.Function) 
 	prompt := s.buildDescriptionPrompt(fn)
 
 	// Generate summary
-	resp, err := s.modelClient.Generate(ctx, model.ModelRequest{
+	resp, err := s.modelClient.Generate(ctx, model.SLMRequest{
 		Model:       s.config.Model,
 		Language:    fn.Language,
 		Prompt:      prompt,
@@ -466,7 +466,7 @@ Functions: %s
 Provide a brief, one-sentence description.`,
 		strings.Join(names, ", "))
 
-	resp, err := s.modelClient.Generate(ctx, model.ModelRequest{
+	resp, err := s.modelClient.Generate(ctx, model.SLMRequest{
 		Model:       s.config.Model,
 		Prompt:      prompt,
 		Temperature: 0.3,

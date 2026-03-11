@@ -6,15 +6,14 @@ import (
 	"fmt"
 	"log"
 	"os"
-	"path/filepath"
 	"runtime"
 	"time"
 
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/cmd/shared"
-	"github.com/yourusername/spoke-tool/internal/config"
-	"github.com/yourusername/spoke-tool/internal/doc"
-	"github.com/yourusername/spoke-tool/internal/model"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/cmd/shared"
+	"example.com/spoke-tool/internal/config"
+	"example.com/spoke-tool/internal/model"
+	"example.com/spoke-tool/internal/test"
 )
 
 var (
@@ -22,12 +21,16 @@ var (
 	configPath  = flag.String("config", "config.yaml", "Path to config file")
 	projectPath = flag.String("path", ".", "Path to project root")
 	watch       = flag.Bool("watch", false, "Watch for changes")
-	force       = flag.Bool("force", false, "Force regenerate all docs")
+	force       = flag.Bool("force", false, "Force regenerate all tests")
+	runTests    = flag.Bool("run", true, "Run tests after generation")
+	coverage    = flag.Bool("coverage", false, "Check coverage after tests")
+	threshold   = flag.Float64("threshold", 80.0, "Coverage threshold percentage")
 	verbose     = flag.Bool("verbose", false, "Verbose output")
 	version     = flag.Bool("version", false, "Show version")
 	logLevel    = flag.String("log-level", "info", "Log level (error, warn, info, debug, trace)")
-	timeout     = flag.Duration("timeout", 5*time.Minute, "Timeout for operations")
-	
+	timeout     = flag.Duration("timeout", 10*time.Minute, "Timeout for operations")
+	language    = flag.String("lang", "", "Specific language to target (go, nodejs, python)")
+
 	// Version info (set at build time)
 	Version = "dev"
 	Commit  = "none"
@@ -102,10 +105,10 @@ func run(flags *shared.CommandFlags, versionInfo shared.VersionInfo) error {
 	}
 
 	logLevel := flags.LogLevel.String()
-	log.Printf("Starting readmegen %s (log level: %s)", versionInfo.Version, logLevel)
+	log.Printf("Starting testgen %s (log level: %s)", versionInfo.Version, logLevel)
 
 	// Load config
-	cfg, err := loadConfig(flags.ConfigPath)
+	cfg, err := loadTestGenConfig(flags.ConfigPath)
 	if err != nil {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
@@ -113,6 +116,9 @@ func run(flags *shared.CommandFlags, versionInfo shared.VersionInfo) error {
 	// Override with CLI flags
 	if flags.ProjectPath != "." {
 		cfg.ProjectRoot = flags.ProjectPath
+	}
+	if *threshold > 0 {
+		cfg.TestSpoke.CoverageThreshold = *threshold
 	}
 
 	// Create context with timeout
@@ -132,18 +138,24 @@ func run(flags *shared.CommandFlags, versionInfo shared.VersionInfo) error {
 	} else {
 		for modelType, available := range status {
 			if !available {
-				log.Printf("Warning: Model %s not available. Run: ollama pull %s", 
-					modelType, getModelName(modelType, cfg))
+				log.Printf("Warning: Model %s not available. Run: ollama pull %s",
+					modelType, getModelDisplayName(modelType, cfg))
 			}
 		}
 	}
 
-	// Initialize documentation generator
-	docGen := doc.NewGenerator(doc.GeneratorConfig{
-		ModelClient: modelClient,
-		ProjectRoot: cfg.ProjectRoot,
-		Sections:    cfg.ReadmeSpoke.Sections,
-		Verbose:     flags.Verbose,
+	// Parse target language if specified
+	targetLang := getTargetLanguage(*language)
+
+	// Initialize test generator
+	testGen := test.NewGenerator(test.GeneratorConfig{
+		ModelClient:       modelClient,
+		ProjectRoot:       cfg.ProjectRoot,
+		AutoRunTests:      *runTests,
+		CheckCoverage:     *coverage,
+		CoverageThreshold: cfg.TestSpoke.CoverageThreshold,
+		TargetLanguage:    targetLang,
+		Verbose:           flags.Verbose,
 	})
 
 	// Track statistics
@@ -152,30 +164,36 @@ func run(flags *shared.CommandFlags, versionInfo shared.VersionInfo) error {
 
 	// Run in watch mode or one-shot
 	if flags.Watch {
-		log.Printf("Starting README generator in watch mode for %s", cfg.ProjectRoot)
-		runWatch(ctx, docGen, cfg, stats)
+		log.Printf("Starting test generator in watch mode for %s", cfg.ProjectRoot)
+		runWatch(ctx, testGen, cfg, stats)
 	} else {
-		log.Printf("Generating README for %s", cfg.ProjectRoot)
-		result, err := runOnce(ctx, docGen, cfg, flags.Force, stats)
+		log.Printf("Generating tests for %s", cfg.ProjectRoot)
+		result, err := runOnce(ctx, testGen, cfg, flags.Force, stats, targetLang)
 		if err != nil {
 			return fmt.Errorf("generation failed: %w", err)
 		}
-		
+
 		stats.TotalDuration = time.Since(startTime)
-		
+
 		// Print stats if verbose
 		if flags.Verbose {
 			printStats(stats)
+			printTestSummary(result)
 		}
-		
-		log.Printf("README generation complete: %s", result.Message)
+
+		log.Printf("Test generation complete: %s", result.Message)
+
+		// Exit with appropriate code
+		if !result.Success {
+			os.Exit(int(result.ExitCode))
+		}
 	}
 
 	return nil
 }
 
 // loadConfig loads and validates the configuration
-func loadConfig(path string) (*types.Config, error) {
+func loadTestGenConfig(path string) (*types.Config, error) {
 	// If config doesn't exist, use defaults
 	if _, err := os.Stat(path); os.IsNotExist(err) {
 		log.Printf("Config file %s not found, using defaults", path)
@@ -206,109 +224,142 @@ func initModelClient(cfg *types.Config) (*model.Client, error) {
 }
 
 // getModelName returns the actual model name for display
-func getModelName(modelType model.ModelType, cfg *types.Config) string {
+func getModelDisplayName(modelType model.ModelType, cfg *types.Config) string {
 	switch modelType {
-	case model.CodeBERT:
+	case model.CodeLLamaEncoder:
 		return cfg.Models.Encoder
 	case model.Gemma2B:
 		return cfg.Models.Fast
-	case model.DeepSeek7B:
+	case model.CodeLLamaDecoder:
 		return cfg.Models.Decoder
 	default:
 		return "unknown"
 	}
 }
 
-// runOnce performs a single documentation generation
-func runOnce(ctx context.Context, gen *doc.Generator, cfg *types.Config, force bool, stats *shared.Stats) (*shared.CommandResult, error) {
-	// Analyze project
+// getTargetLanguage parses the language flag
+func getTargetLanguage(langFlag string) types.Language {
+	if langFlag == "" {
+		return ""
+	}
+	switch langFlag {
+	case "go":
+		return types.Go
+	case "nodejs", "js":
+		return types.NodeJS
+	case "python", "py":
+		return types.Python
+	default:
+		log.Printf("Warning: Unknown language %s, will auto-detect", langFlag)
+		return ""
+	}
+}
+
+// runOnce performs a single test generation
+func runOnce(ctx context.Context, gen *test.Generator, cfg *types.Config, force bool, stats *shared.Stats, targetLang types.Language) (*test.GenerationResult, error) {
+	// Analyze project for functions without tests
 	analysisStart := time.Now()
 	analysis, err := gen.AnalyzeProject(ctx)
 	stats.AnalysisDuration = time.Since(analysisStart)
 	if err != nil {
-		return &shared.CommandResult{
-			Success:  false,
-			Message:  "Analysis failed",
-			ExitCode: shared.ExitCodeAnalysisError,
-			Error:    err.Error(),
-		}, fmt.Errorf("failed to analyze project: %w", err)
+		return nil, fmt.Errorf("failed to analyze project: %w", err)
 	}
 	stats.FilesAnalyzed = len(analysis.Files)
 	stats.FunctionsFound = len(analysis.Functions)
 
-	// Check if README needs update
-	needsUpdate := force
-	if !needsUpdate {
-		needsUpdate, err = gen.NeedsUpdate(ctx, analysis)
-		if err != nil {
-			log.Printf("Warning: Failed to check if update needed: %v", err)
-			needsUpdate = true // Update if we can't determine
-		}
-	}
-
-	if !needsUpdate {
-		return &shared.CommandResult{
-			Success:  true,
-			Message:  "README is up to date, skipping generation",
-			ExitCode: shared.ExitCodeSuccess,
+	// Find functions that need tests
+	needsTests := gen.FindUntestedFunctions(analysis)
+	if len(needsTests) == 0 && !force {
+		log.Println("All functions have tests, nothing to generate")
+		return &test.GenerationResult{
+			Success:         true,
+			Message:         "All functions have tests",
+			TestsGenerated:  0,
+			FunctionsTested: 0,
 		}, nil
 	}
 
-	// Generate README sections
+	log.Printf("Found %d functions needing tests", len(needsTests))
+
+	// Generate tests
 	genStart := time.Now()
-	sections, err := gen.GenerateSections(ctx, analysis)
+	result, err := gen.GenerateTests(ctx, analysis, needsTests, force)
 	stats.ModelDuration = time.Since(genStart)
 	if err != nil {
-		return &shared.CommandResult{
-			Success:  false,
-			Message:  "Section generation failed",
-			ExitCode: shared.ExitCodeGenerationError,
-			Error:    err.Error(),
-		}, fmt.Errorf("failed to generate sections: %w", err)
+		return nil, fmt.Errorf("failed to generate tests: %w", err)
 	}
-	stats.DocsGenerated = len(sections)
+	stats.TestsGenerated = len(result.GeneratedTests)
+	stats.ModelsQueried = result.ModelsQueried
 
-	// Assemble final README
+	// Write test files
 	writeStart := time.Now()
-	readme, err := gen.AssembleReadme(ctx, analysis, sections)
-	if err != nil {
-		return &shared.CommandResult{
-			Success:  false,
-			Message:  "README assembly failed",
-			ExitCode: shared.ExitCodeGenerationError,
-			Error:    err.Error(),
-		}, fmt.Errorf("failed to assemble README: %w", err)
-	}
-
-	// Write README file
-	readmePath := filepath.Join(cfg.ProjectRoot, "README.md")
-	if err := os.WriteFile(readmePath, []byte(readme.Content), 0644); err != nil {
-		return &shared.CommandResult{
-			Success:  false,
-			Message:  "Write failed",
-			ExitCode: shared.ExitCodeWriteError,
-			Error:    err.Error(),
-		}, fmt.Errorf("failed to write README: %w", err)
+	if err := gen.WriteTestFiles(ctx, result); err != nil {
+		stats.WriteDuration = time.Since(writeStart)
+		return nil, fmt.Errorf("failed to write test files: %w", err)
 	}
 	stats.WriteDuration = time.Since(writeStart)
 
-	log.Printf("Successfully updated %s", readmePath)
+	// Run tests if requested
+	if gen.Config().AutoRunTests {
+		log.Println("Running tests...")
+		testResults, err := gen.RunTests(ctx, result)
+		if err != nil {
+			log.Printf("Warning: Tests failed to run: %v", err)
+		} else {
+			result.TestResults = testResults
 
-	return &shared.CommandResult{
-		Success:  true,
-		Message:  fmt.Sprintf("Updated %s", readmePath),
-		ExitCode: shared.ExitCodeSuccess,
-	}, nil
+			// Check if any tests failed
+			if testResults.Failed > 0 {
+				log.Printf("⚠️  %d tests failed", testResults.Failed)
+				result.Success = false
+				result.Message = fmt.Sprintf("%d tests failed", testResults.Failed)
+				result.ExitCode = shared.ExitCodeGenerationError
+
+				// Analyze failures by iterating through Results (not Failures)
+				for _, testResult := range testResults.Results {
+					if testResult.Status == types.TestStatusFailed {
+						analysis, err := gen.AnalyzeFailure(ctx, &testResult)
+						if err != nil {
+							log.Printf("Failed to analyze failure: %v", err)
+						} else {
+							log.Printf("Failure analysis for %s:\n%s", testResult.Name, analysis)
+						}
+					}
+				}
+			} else {
+				log.Printf("✅ All %d tests passed", testResults.Passed)
+			}
+
+			// Check coverage if requested
+			if *coverage && testResults.Passed == testResults.Total {
+				coverage, err := gen.CheckCoverage(ctx)
+				if err != nil {
+					log.Printf("Warning: Failed to check coverage: %v", err)
+				} else {
+					result.Coverage = coverage
+					log.Printf("Coverage: %.1f%%", coverage.Overall)
+
+					if coverage.Overall < cfg.TestSpoke.CoverageThreshold {
+						log.Printf("⚠️  Coverage below threshold: %.1f%% < %.1f%%",
+							coverage.Overall, cfg.TestSpoke.CoverageThreshold)
+					}
+				}
+			}
+		}
+	}
+
+	return result, nil
 }
 
-// runWatch watches for changes and regenerates documentation
-func runWatch(ctx context.Context, gen *doc.Generator, cfg *types.Config, stats *shared.Stats) {
+// runWatch watches for changes and regenerates tests
+func runWatch(ctx context.Context, gen *test.Generator, cfg *types.Config, stats *shared.Stats) {
 	// Create ticker for periodic checks (simplified - in production use fsnotify)
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
 	// Track last analysis to avoid unnecessary updates
 	var lastAnalysis *types.CodeAnalysis
+	var lastResult *test.GenerationResult
 
 	for {
 		select {
@@ -323,65 +374,48 @@ func runWatch(ctx context.Context, gen *doc.Generator, cfg *types.Config, stats 
 			}
 
 			// Check if anything changed
-			if lastAnalysis != nil && !hasChanged(lastAnalysis, analysis) {
+			if lastAnalysis != nil && !testGenHasChanged(lastAnalysis, analysis) {
 				continue // No changes
 			}
 
-			// Check if README needs update
-			needsUpdate, err := gen.NeedsUpdate(ctx, analysis)
-			if err != nil {
-				log.Printf("Failed to check update: %v", err)
+			// Find functions that need tests
+			needsTests := gen.FindUntestedFunctions(analysis)
+			if len(needsTests) == 0 {
+				if lastResult == nil || lastResult.TestsGenerated > 0 {
+					log.Println("All functions have tests")
+				}
+				lastAnalysis = analysis
 				continue
 			}
 
-			if needsUpdate {
-				log.Println("Changes detected, regenerating README...")
-				
-				// Generate and write README
-				sections, err := gen.GenerateSections(ctx, analysis)
-				if err != nil {
-					log.Printf("Failed to generate sections: %v", err)
-					continue
-				}
+			log.Printf("Found %d functions needing tests, regenerating...", len(needsTests))
 
-				readme, err := gen.AssembleReadme(ctx, analysis, sections)
-				if err != nil {
-					log.Printf("Failed to assemble README: %v", err)
-					continue
-				}
-
-				readmePath := filepath.Join(cfg.ProjectRoot, "README.md")
-				if err := os.WriteFile(readmePath, []byte(readme.Content), 0644); err != nil {
-					log.Printf("Failed to write README: %v", err)
-					continue
-				}
-
-				log.Printf("README updated at %s", time.Now().Format(time.RFC3339))
+			// Generate and run tests
+			targetLang := gen.Config().TargetLanguage
+			result, err := runOnce(ctx, gen, cfg, true, stats, targetLang)
+			if err != nil {
+				log.Printf("Generation failed: %v", err)
+				continue
 			}
 
+			lastResult = result
 			lastAnalysis = analysis
 		}
 	}
 }
 
-// hasChanged checks if the code analysis has changed significantly
-func hasChanged(old, new *types.CodeAnalysis) bool {
-	if old == nil || new == nil {
+// hasChanged compares two analyses to determine if code has changed
+func testGenHasChanged(last *types.CodeAnalysis, current *types.CodeAnalysis) bool {
+	if last == nil || current == nil {
 		return true
 	}
-
-	// Check number of files
-	if len(old.Files) != len(new.Files) {
+	if len(last.Files) != len(current.Files) {
 		return true
 	}
-
-	// Check number of functions
-	if len(old.Functions) != len(new.Functions) {
+	if len(last.Functions) != len(current.Functions) {
 		return true
 	}
-
-	// Check timestamps (simplified)
-	return old.Timestamp != new.Timestamp
+	return false
 }
 
 // printStats prints command statistics
@@ -389,10 +423,37 @@ func printStats(stats *shared.Stats) {
 	log.Printf("=== Statistics ===")
 	log.Printf("Files analyzed:    %d", stats.FilesAnalyzed)
 	log.Printf("Functions found:   %d", stats.FunctionsFound)
-	log.Printf("Docs generated:    %d", stats.DocsGenerated)
+	log.Printf("Tests generated:   %d", stats.TestsGenerated)
 	log.Printf("Models queried:    %d", stats.ModelsQueried)
 	log.Printf("Analysis time:     %v", stats.AnalysisDuration)
 	log.Printf("Model time:        %v", stats.ModelDuration)
 	log.Printf("Write time:        %v", stats.WriteDuration)
 	log.Printf("Total time:        %v", stats.TotalDuration)
+}
+
+// printTestSummary prints test results summary
+func printTestSummary(result *test.GenerationResult) {
+	if result.TestResults == nil {
+		return
+	}
+
+	log.Printf("=== Test Results ===")
+	log.Printf("Total:  %d", result.TestResults.Total)
+	log.Printf("Passed: %d ✅", result.TestResults.Passed)
+	log.Printf("Failed: %d ❌", result.TestResults.Failed)
+	log.Printf("Skipped: %d ⏭️", result.TestResults.Skipped)
+
+	if result.Coverage != nil {
+		log.Printf("Coverage: %.1f%%", result.Coverage.Overall)
+	}
+
+	// Show failures by iterating through Results
+	if result.TestResults.Failed > 0 {
+		log.Printf("=== Failures ===")
+		for _, test := range result.TestResults.Results {
+			if test.Status == types.TestStatusFailed {
+				log.Printf("  %s: %s", test.Name, test.Error)
+			}
+		}
+	}
 }

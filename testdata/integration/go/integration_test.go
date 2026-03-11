@@ -14,10 +14,10 @@ import (
 	"testing"
 	"time"
 
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/internal/doc"
-	"github.com/yourusername/spoke-tool/internal/model"
-	"github.com/yourusername/spoke-tool/internal/test"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/internal/doc"
+	"example.com/spoke-tool/internal/model"
+	"example.com/spoke-tool/internal/test"
 )
 
 // ============================================================================

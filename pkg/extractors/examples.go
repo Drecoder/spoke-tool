@@ -8,7 +8,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/yourusername/spoke-tool/api/types"
+	"example.com/spoke-tool/api/types"
 )
 
 // ExampleExtractor extracts code examples from test files
@@ -144,7 +144,7 @@ func (e *ExampleExtractor) ExtractFromNodeJSTests(content string, filePath strin
 			testName := matches[1]
 
 			// Find the end of the test block
-			endLine, blockContent := e.extractBlock(lines, i)
+			_, blockContent := e.extractBlock(lines, i)
 
 			example := &Example{
 				Code:       blockContent,
@@ -210,7 +210,7 @@ func (e *ExampleExtractor) ExtractFromPythonTests(content string, filePath strin
 			testName := matches[1]
 
 			// Find the end of the test function
-			endLine, blockContent := e.extractPythonFunction(lines, i)
+			_, blockContent := e.extractPythonFunction(lines, i)
 
 			example := &Example{
 				Code:       blockContent,

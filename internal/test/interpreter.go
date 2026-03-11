@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/internal/common"
-	"github.com/yourusername/spoke-tool/internal/model"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/internal/common"
+	"example.com/spoke-tool/internal/model"
 )
 
 // Interpreter analyzes test failures and explains WHY they happened
@@ -83,7 +83,7 @@ func (i *Interpreter) ExplainFailure(ctx context.Context, failure *types.TestFai
 	prompt := i.buildExplanationPrompt(failure)
 
 	// Get explanation from model
-	resp, err := i.modelClient.Generate(ctx, model.Request{
+	resp, err := i.modelClient.Generate(ctx, model.SLMRequest{
 		Model:       i.config.Model,
 		Language:    failure.Language,
 		Prompt:      prompt,
@@ -157,7 +157,7 @@ func (i *Interpreter) AnalyzeFailurePattern(ctx context.Context, failures []*Fai
 	sb.WriteString("\nWhat patterns do you notice? Are these failures related?\n")
 	sb.WriteString("DO NOT suggest fixes - just identify patterns.\n")
 
-	resp, err := i.modelClient.Generate(ctx, model.Request{
+	resp, err := i.modelClient.Generate(ctx, model.SLMRequest{
 		Model:       i.config.Model,
 		Prompt:      sb.String(),
 		Temperature: 0.3,
@@ -187,7 +187,7 @@ What test cases might be missing?
 Provide 2-3 specific areas to investigate.`,
 		failure.TestName, failure.ErrorMessage, failure.Explanation)
 
-	resp, err := i.modelClient.Generate(ctx, model.Request{
+	resp, err := i.modelClient.Generate(ctx, model.SLMRequest{
 		Model:       i.config.Model,
 		Prompt:      prompt,
 		Temperature: 0.4,

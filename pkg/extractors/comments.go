@@ -9,7 +9,7 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/yourusername/spoke-tool/api/types"
+	"example.com/spoke-tool/api/types"
 )
 
 // CommentExtractor extracts comments and documentation from code
@@ -745,10 +745,10 @@ func (c *CommentExtractor) GetSummary(comments []*Comment) string {
 		// Show notes
 		if noteCount > 0 {
 			sb.WriteString("   Notes:\n")
-			for _, c := range fileComments {
-				if c.IsNote {
+			for _, comment := range fileComments {
+				if comment.IsNote {
 					sb.WriteString(fmt.Sprintf("     • [%s] Line %d: %s\n",
-						c.NoteType, c.Line, c.cleanComment(c.Text)))
+						comment.NoteType, comment.Line, c.cleanComment(comment.Text)))
 				}
 			}
 		}

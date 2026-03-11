@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"../api/types/"
+	"example.com/spoke-tool/api/types"
 )
 
 // CoverageRunner runs coverage tools and collects results

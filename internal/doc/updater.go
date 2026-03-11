@@ -9,8 +9,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/internal/common"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/internal/common"
 )
 
 // Updater handles updating README files while preserving manual content

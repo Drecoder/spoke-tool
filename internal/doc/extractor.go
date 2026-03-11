@@ -10,8 +10,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/internal/common"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/internal/common"
 )
 
 // Extractor handles extraction of documentation content from code and tests
@@ -156,11 +156,11 @@ func (e *Extractor) ExtractFromProject(ctx context.Context, analysis *types.Code
 
 		switch file.Language {
 		case types.Go:
-			content, err = e.extractFromGo(file, isTest)
+			content, err = e.extractFromGo(&file, isTest)
 		case types.NodeJS:
-			content, err = e.extractFromNodeJS(file, isTest)
+			content, err = e.extractFromNodeJS(&file, isTest)
 		case types.Python:
-			content, err = e.extractFromPython(file, isTest)
+			content, err = e.extractFromPython(&file, isTest)
 		default:
 			e.logger.Debug("Skipping unsupported language", "language", file.Language)
 			continue

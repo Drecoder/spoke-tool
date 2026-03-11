@@ -20,10 +20,10 @@ import (
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 
-	"github.com/yourusername/spoke-tool/testdata/sample-code/mixed-project/go-server/config"
-	"github.com/yourusername/spoke-tool/testdata/sample-code/mixed-project/go-server/handlers"
-	"github.com/yourusername/spoke-tool/testdata/sample-code/mixed-project/go-server/middleware"
-	"github.com/yourusername/spoke-tool/testdata/sample-code/mixed-project/go-server/models"
+	"example.com/spoke-tool/testdata/sample-code/mixed-project/go-server/config"
+	"example.com/spoke-tool/testdata/sample-code/mixed-project/go-server/handlers"
+	"example.com/spoke-tool/testdata/sample-code/mixed-project/go-server/middleware"
+	"example.com/spoke-tool/testdata/sample-code/mixed-project/go-server/models"
 )
 
 // ============================================================================

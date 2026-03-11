@@ -3,7 +3,7 @@ package model
 import (
 	"time"
 
-	"github.com/yourusername/spoke-tool/api/types"
+	"example.com/spoke-tool/api/types"
 )
 
 // ModelType represents the different SLM models we support

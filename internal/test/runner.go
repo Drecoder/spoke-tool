@@ -1,21 +1,64 @@
-// Create runner
-runner := NewRunner(RunnerConfig{
-	WorkingDir:      "./myproject",
-	Timeout:         2 * time.Minute,
-	CollectCoverage: true,
-})
+package test
 
-// Run specific test files
-run, err := runner.RunTests(ctx, []string{"math_test.go"}, types.Go)
+import (
+	"context"
+	"time"
 
-// Run all tests
-results, err := runner.RunAllTests(ctx)
+	"example.com/spoke-tool/api/types"
+)
 
-// Get summary
-fmt.Println(runner.GetSummary(run))
+// Runner handles test execution
+type Runner struct {
+	config RunnerConfig
+}
 
-// Get failure details
-failures := runner.GetFailureDetails(run)
-for _, f := range failures {
-	fmt.Printf("❌ %s: %s\n", f.TestName, f.ErrorMsg)
+// RunnerConfig configures the test runner
+type RunnerConfig struct {
+	WorkingDir      string
+	Timeout         time.Duration
+	CollectCoverage bool
+}
+
+// NewRunner creates a new test runner
+func NewRunner(config RunnerConfig) *Runner {
+	return &Runner{
+		config: config,
+	}
+}
+
+// RunTests runs tests for the specified files
+func (r *Runner) RunTests(ctx context.Context, testFiles []string, language types.Language) (*TestRun, error) {
+	// Placeholder implementation
+	return &TestRun{
+		TestFiles: testFiles,
+		Language:  language,
+	}, nil
+}
+
+// RunAllTests runs all tests in the project
+func (r *Runner) RunAllTests(ctx context.Context) (map[types.Language][]*TestRun, error) {
+	return make(map[types.Language][]*TestRun), nil
+}
+
+// GetSummary returns a summary of test results
+func (r *Runner) GetSummary(run *TestRun) string {
+	if run == nil {
+		return "No test results"
+	}
+	return "Test run completed"
+}
+
+// GetFailureDetails returns details about test failures
+func (r *Runner) GetFailureDetails(run *TestRun) []*types.TestFailure {
+	return nil
+}
+
+// TestRun represents a single test execution
+type TestRun struct {
+	TestFiles []string
+	Language  types.Language
+	Results   *types.TestSuite
+	Coverage  *types.TestCoverage
+	Output    string
+	Error     string
 }

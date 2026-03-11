@@ -13,7 +13,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/yourusername/spoke-tool/api/types"
+	"example.com/spoke-tool/api/types"
 )
 
 // TestRunner runs tests and collects results
@@ -369,6 +369,7 @@ func (r *TestRunner) parseGoTestOutput(output string) *types.TestSuite {
 		if strings.HasPrefix(line, "--- FAIL") {
 			suite.Failed++
 			suite.Total++
+			failed = true
 			result := &types.TestResult{
 				Name:   currentTest,
 				Status: types.TestStatusFailed,

@@ -11,8 +11,8 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/yourusername/spoke-tool/api/types"
-	"github.com/yourusername/spoke-tool/internal/common"
+	"example.com/spoke-tool/api/types"
+	"example.com/spoke-tool/internal/common"
 )
 
 // Analyzer analyzes code to find functions that need tests
@@ -141,7 +141,7 @@ func (a *Analyzer) AnalyzeProject(ctx context.Context, projectRoot string) (*Ana
 	}
 
 	// Walk through all files in the project
-	err := a.fileUtils.Walk(projectRoot, func(path string, info os.FileInfo, err error) error {
+	err := filepath.Walk(projectRoot, func(path string, info os.FileInfo, err error) error {
 		if err != nil {
 			return err
 		}
@@ -197,7 +197,7 @@ func (a *Analyzer) AnalyzeProject(ctx context.Context, projectRoot string) (*Ana
 				Path:      path,
 				Language:  lang,
 				Content:   content,
-				Framework: a.detectTestFramework(path, content, lang),
+				Framework: types.TestFramework(a.detectTestFramework(path, content, lang)),
 			}
 			result.TestFiles = append(result.TestFiles, testFile)
 			result.Files = append(result.Files, codeFile)

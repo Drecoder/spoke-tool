@@ -13,10 +13,10 @@ import (
 	httpSwagger "github.com/swaggo/http-swagger"
 	"go.uber.org/zap"
 
-	"github.com/yourusername/spoke-tool/internal/auth"
-	"github.com/yourusername/spoke-tool/internal/handlers"
-	"github.com/yourusername/spoke-tool/internal/middleware"
-	"github.com/yourusername/spoke-tool/internal/services"
+	"example.com/spoke-tool/internal/auth"
+	"example.com/spoke-tool/internal/handlers"
+	"example.com/spoke-tool/internal/middleware"
+	"example.com/spoke-tool/internal/services"
 )
 
 // ============================================================================
