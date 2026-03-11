@@ -29,9 +29,9 @@ graph TD
     
     %% SLM
     subgraph SLM[SLM Pool]
-        CB[CodeBERT]
+        CB[CodeLLama]
         G[Gemma 2B]
-        DS[DeepSeek 7B]
+        DS[CodeLLama]
         O[Ollama]
     end
     
@@ -65,4 +65,5 @@ graph TD
     class TA,TG,TR,TI test
     class RE,RS,RF,RM doc
     class CB,G,DS,O slm
+
     class FS,Git external
