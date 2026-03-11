@@ -15,7 +15,7 @@ graph LR
         T_Generate[Generate Tests]:::phase
         T_Run[Execute]:::phase
         T_Decision{Fail?}:::decision
-        T_SLM2[CodeLLamak<br/>Analysis]:::slm
+        T_SLM2[CodeLLama<br/>Analysis]:::slm
         T_Explain[Explain Failure]:::phase
         T_Out[Tests + Report]:::output
         
@@ -34,7 +34,7 @@ graph LR
         direction TB
         D_In[Code + Tests]:::input
         D_Extract[Extract Content]:::phase
-        D_SLM1[CodeBERT<br/>DeepSeek]:::slm
+        D_SLM1[CodeLLama<br/>DeepSeek]:::slm
         D_Analyze[Analyze Patterns]:::phase
         D_SLM2[Gemma 2B<br/>Summarize]:::slm
         D_Generate[Generate Sections]:::phase
@@ -56,3 +56,4 @@ graph LR
     classDef output fill:#ff9f1c,stroke:#333,color:#333
 
     classDef decision fill:#e71d36,stroke:#333,color:#fff
+
