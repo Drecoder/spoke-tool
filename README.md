@@ -15,55 +15,64 @@ All processing happens **locally** using SLMs (Small Language Models) via Ollama
 ## 🏗️ Architecture
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                        File System                          │
-│                    (Code + Tests + Docs)                    │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                      Orchestrator Hub                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  Dispatcher  │  │   Monitor    │  │    Queue     │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│  ┌──────────────┐  ┌──────────────┐                         │
-│  │    Audit     │  │   Squeeze    │                         │
-│  └──────────────┘  └──────────────┘                         │
-└─────────────────────────────────────────────────────────────┘
-                          │
-            ┌─────────────┴─────────────┐
-            │                           │
-            ▼                           ▼
-┌───────────────────────┐    ┌───────────────────────┐
-│    Test Spoke         │    │   Readme Spoke        │
-│  ┌─────────────────┐  │    │ ┌─────────────────┐   │
-│  │   Analyzer      │  │    │ │   Extractor     │   │
-│  └─────────────────┘  │    │ └─────────────────┘   │
-│  ┌─────────────────┐  │    │ ┌─────────────────┐   │
-│  │   Generator     │  │    │ │   Summarizer    │   │
-│  └─────────────────┘  │    │ └─────────────────┘   │
-│  ┌─────────────────┐  │    │ ┌─────────────────┐   │
-│  │    Runner       │  │    │ │   Formatter     │   │
-│  └─────────────────┘  │    │ └─────────────────┘   │
-│  ┌─────────────────┐  │    │ ┌─────────────────┐   │
-│  │  Interpreter    │  │    │ │    Merger       │   │
-│  └─────────────────┘  │    │ └─────────────────┘   │
-└───────────┬───────────┘    └───────────┬───────────┘
-            │                           │
-            └─────────────┬─────────────┘
-                          │
-                          ▼
-┌─────────────────────────────────────────────────────────────┐
-│                       SLM Pool                               │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  codellama:7b    │  │   Gemma 2B   │  │ DeepSeek 7B  │      │
-│  │  (Encoder)   │  │   (Fast)     │  │ (Reasoning)  │      │
-│  └──────────────┘  └──────────────┘  └──────────────┘      │
-│                    ┌──────────────┐                         │
-│                    │   Ollama     │                         │
-│                    │    Local     │                         │
-│                    └──────────────┘                         │
-└─────────────────────────────────────────────────────────────┘
+```mermaid
+graph TB
+    FS[("File System<br/>(Code + Tests + Docs)")]
+    
+    subgraph HUB [Orchestrator Hub]
+        direction LR
+        D[Dispatcher]
+        M[Monitor]
+        Q[Queue]
+        A[Audit]
+        S[Squeeze]
+    end
+    
+    subgraph TEST [Test Spoke]
+        direction TB
+        T1[Analyzer]
+        T2[Generator]
+        T3[Runner]
+        T4[Interpreter]
+    end
+    
+    subgraph README [Readme Spoke]
+        direction TB
+        R1[Extractor]
+        R2[Summarizer]
+        R3[Formatter]
+        R4[Merger]
+    end
+    
+    subgraph SLM [SLM Pool]
+        direction LR
+        C1[CodeLlama 7B<br/>Encoder]
+        C2[Gemma 2B<br/>Fast]
+        C3[DeepSeek 7B<br/>Reasoning]
+        O[Ollama<br/>Local]
+    end
+    
+    FS --> HUB
+    HUB --> TEST
+    HUB --> README
+    TEST --> SLM
+    README --> SLM
+    TEST --> FS
+    README --> FS
+    
+    classDef filesystem fill:#e1f5fe,stroke:#01579b,stroke-width:2px
+    classDef hub fill:#fff3e0,stroke:#ff6f00,stroke-width:2px
+    classDef spoke fill:#e8f5e8,stroke:#1b5e20,stroke-width:2px
+    classDef slm fill:#f3e5f5,stroke:#4a148c,stroke-width:2px
+    
+    class FS filesystem
+    class HUB hub
+    class D,M,Q,A,S hub
+    class TEST,README spoke
+    class T1,T2,T3,T4 spoke
+    class R1,R2,R3,R4 spoke
+    class SLM slm
+    class C1,C2,C3,O slm
 ```
 
 ## ✨ Key Principles
@@ -470,3 +479,4 @@ Internal team - see internal documentation.
 - ✅ **Development instructions**
 - ✅ **Privacy & security** focus
 - ✅ **Troubleshooting** section# spoke-tool
+
