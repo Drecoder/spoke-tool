@@ -15,58 +15,55 @@ All processing happens **locally** using SLMs (Small Language Models) via Ollama
 ## 🏗️ Architecture
 
 ```
-flowchart TB
-    FS[("File System<br/>(Code + Tests + Docs)")]
-    
-    subgraph HUB [Orchestrator Hub]
-        direction LR
-        D[Dispatcher]
-        M[Monitor]
-        Q[Queue]
-        A[Audit]
-        S[Squeeze]
-    end
-    
-    subgraph TEST [Test Spoke]
-        direction TB
-        T1[Analyzer]
-        T2[Generator]
-        T3[Runner]
-        T4[Interpreter]
-    end
-    
-    subgraph README [Readme Spoke]
-        direction TB
-        R1[Extractor]
-        R2[Summarizer]
-        R3[Formatter]
-        R4[Merger]
-    end
-    
-    subgraph SLM [SLM Pool]
-        direction LR
-        C1[CodeLlama 7B<br/>Encoder/Decoder]
-        C2[Gemma 2B<br/>Fast]
-        O[Ollama<br/>Local]
-    end
-    
-    FS --> HUB
-    HUB --> TEST
-    HUB --> README
-    TEST --> SLM
-    README --> SLM
-    TEST --> FS
-    README --> FS
-    
-    classDef filesystem fill:#e1f5fe,stroke:#01579b
-    classDef hub fill:#fff3e0,stroke:#ff6f00
-    classDef spoke fill:#e8f5e8,stroke:#1b5e20
-    classDef slm fill:#f3e5f5,stroke:#4a148c
-    
-    class FS filesystem
-    class HUB hub
-    class TEST,README spoke
-    class SLM slm
+┌─────────────────────────────────────────────────────────────┐
+│                        File System                          │
+│                    (Code + Tests + Docs)                    │
+└─────────────────────────┬───────────────────────────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      Orchestrator Hub                        │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │  Dispatcher  │  │   Monitor    │  │    Queue     │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│  ┌──────────────┐  ┌──────────────┐                         │
+│  │    Audit     │  │   Squeeze    │                         │
+│  └──────────────┘  └──────────────┘                         │
+└─────────────────────────────────────────────────────────────┘
+                          │
+            ┌─────────────┴─────────────┐
+            │                           │
+            ▼                           ▼
+┌───────────────────────┐    ┌───────────────────────┐
+│    Test Spoke         │    │   Readme Spoke        │
+│  ┌─────────────────┐  │    │ ┌─────────────────┐   │
+│  │   Analyzer      │  │    │ │   Extractor     │   │
+│  └─────────────────┘  │    │ └─────────────────┘   │
+│  ┌─────────────────┐  │    │ ┌─────────────────┐   │
+│  │   Generator     │  │    │ │   Summarizer    │   │
+│  └─────────────────┘  │    │ └─────────────────┘   │
+│  ┌─────────────────┐  │    │ ┌─────────────────┐   │
+│  │    Runner       │  │    │ │   Formatter     │   │
+│  └─────────────────┘  │    │ └─────────────────┘   │
+│  ┌─────────────────┐  │    │ ┌─────────────────┐   │
+│  │  Interpreter    │  │    │ │    Merger       │   │
+│  └─────────────────┘  │    │ └─────────────────┘   │
+└───────────┬───────────┘    └───────────┬───────────┘
+            │                           │
+            └─────────────┬─────────────┘
+                          │
+                          ▼
+┌─────────────────────────────────────────────────────────────┐
+│                       SLM Pool                               │
+│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
+│  │  codellama:7b    │  │   Gemma 2B   │  │ DeepSeek 7B  │      │
+│  │  (Encoder)   │  │   (Fast)     │  │ (Reasoning)  │      │
+│  └──────────────┘  └──────────────┘  └──────────────┘      │
+│                    ┌──────────────┐                         │
+│                    │   Ollama     │                         │
+│                    │    Local     │                         │
+│                    └──────────────┘                         │
+└─────────────────────────────────────────────────────────────┘
 ```
 
 ## ✨ Key Principles
@@ -88,6 +85,7 @@ flowchart TB
   ```bash
   ollama pull codellama:7b
   ollama pull gemma2:2b
+  ollama pull codellama:7b
   ```
 
 ### Installation
@@ -185,7 +183,7 @@ readmegen -path ./my-project -watch
 
 ## ⚙️ Configuration
 
-Create a `config.yaml` file in your project root. If no config file is found, default values will be used.
+Create a `config.yaml` file in your project root:
 
 ```yaml
 # config.yaml
@@ -325,7 +323,7 @@ make test-integration
    ↓
 3. Identify Functions Without Tests
    ↓
-4. Generate Tests (CodeLlama 7B)
+4. Generate Tests (DeepSeek 7B)
    ↓
 5. Write Test Files
    ↓
@@ -446,9 +444,29 @@ Internal team - see internal documentation.
 **Built with ❤️ for internal use**
 ```
 
-This clean version includes:
-- ✅ Fixed the duplicate `ollama pull` command
-- ✅ Corrected the typo in `codellama`
-- ✅ Added a comment about default config behavior
-- ✅ Maintained all the excellent structure and content
-- ✅ Preserved the professional tone throughout
+## ✅ **What this README provides:**
+
+| Section | Purpose |
+|---------|---------|
+| **Overview** | What the tool does and its architecture |
+| **Key Principles** | Design philosophy (no auto-fixes, local-first) |
+| **Quick Start** | Get running in minutes |
+| **Components** | Detailed usage of testgen and readmegen |
+| **Configuration** | Config file reference |
+| **Development** | Building, testing, extending |
+| **How It Works** | Flow diagrams for both spokes |
+| **Privacy & Security** | Why it's safe to use |
+| **Performance** | Squeeze mechanism explanation |
+| **Examples** | Real-world usage examples |
+| **Troubleshooting** | Common issues and solutions |
+
+## 🎯 **Key Features:**
+
+- ✅ Clear explanation of the **no auto-fixes** principle
+- ✅ **Architecture diagram** showing all components
+- ✅ **Quick start** for new users
+- ✅ **Detailed command reference**
+- ✅ **Configuration guide**
+- ✅ **Development instructions**
+- ✅ **Privacy & security** focus
+- ✅ **Troubleshooting** section# spoke-tool
