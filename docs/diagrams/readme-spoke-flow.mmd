@@ -24,7 +24,7 @@ graph TB
     
     subgraph SLM_Extract [SLM Processing - Extraction]
         direction LR
-        E_Encoder[CodeBERT<br/>Code Understanding]
+        E_Encoder[codellama:7b<br/>Code Understanding]
         E_Pattern[DeepSeek 7B<br/>Pattern Recognition]
         
         E_Encoder --> E_Pattern
@@ -44,7 +44,7 @@ graph TB
     
     subgraph SLM_Summarize [SLM Processing - Summarization]
         direction LR
-        S_Encoder[CodeBERT<br/>Function Understanding]
+        S_Encoder[codellama:7b<br/>Function Understanding]
         S_Summarizer[Gemma 2B<br/>API Summarization]
         
         S_Encoder --> S_Summarizer

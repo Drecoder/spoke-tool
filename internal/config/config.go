@@ -198,8 +198,8 @@ func DefaultConfig() *types.Config {
 			Decoder string `json:"decoder" yaml:"decoder"`
 			Fast    string `json:"fast" yaml:"fast"`
 		}{
-			Encoder: "codebert",
-			Decoder: "deepseek-coder:7b",
+			Encoder: "codellama:7b",
+			Decoder: "codellama:7b",
 			Fast:    "gemma2:2b",
 		},
 
@@ -266,10 +266,10 @@ func setDefaults(cfg types.Config) types.Config {
 
 	// Model defaults
 	if cfg.Models.Encoder == "" {
-		cfg.Models.Encoder = "codebert"
+		cfg.Models.Encoder = "codellama:7b"
 	}
 	if cfg.Models.Decoder == "" {
-		cfg.Models.Decoder = "deepseek-coder:7b"
+		cfg.Models.Decoder = "codellama:7b"
 	}
 	if cfg.Models.Fast == "" {
 		cfg.Models.Fast = "gemma2:2b"
@@ -488,10 +488,10 @@ project_root: "."
 # Model settings
 models:
   # Encoder model for code understanding
-  encoder: "codebert"
+  encoder: "codellama:7b"
   
   # Decoder model for complex tasks (test generation, error analysis)
-  decoder: "deepseek-coder:7b"
+  decoder: "codellama:7b"
   
   # Fast model for simple tasks (documentation generation)
   fast: "gemma2:2b"

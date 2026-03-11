@@ -365,14 +365,14 @@ test_spoke:
       cover_command: "pytest --cov=."
   
   generation:
-    model: "deepseek-coder:7b"        # For complex tests
+    model: "codellama:7b"        # For complex tests
     fallback_model: "gemma2:2b"       # For simple tests
     max_tests_per_function: 10
     include_edge_cases: true
     generate_mocks: true
   
   analysis:
-    model: "deepseek-coder:7b"        # For failure analysis
+    model: "codellama:7b"        # For failure analysis
     detailed_reports: true
   
   reporting:

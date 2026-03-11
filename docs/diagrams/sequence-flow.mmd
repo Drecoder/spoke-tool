@@ -14,7 +14,7 @@ sequenceDiagram
     
     Hub->>Test: Trigger Test Generation
     Test->>FS: Read Changed Files
-    Test->>SLM: Analyze Code (CodeBERT)
+    Test->>SLM: Analyze Code (codellama:7b)
     SLM-->>Test: Code Structure
     
     Test->>SLM: Generate Tests (DeepSeek 7B)
@@ -28,7 +28,7 @@ sequenceDiagram
         Hub->>Readme: Trigger Doc Update
         
         Readme->>FS: Read Code + Tests
-        Readme->>SLM: Extract Examples (CodeBERT)
+        Readme->>SLM: Extract Examples (codellama:7b)
         SLM-->>Readme: Examples
         
         Readme->>SLM: Summarize API (Gemma 2B)

@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"log"
 	"os"
+	"path/filepath"
 	"runtime"
 	"time"
 
@@ -226,11 +227,11 @@ func initModelClient(cfg *types.Config) (*model.Client, error) {
 // getModelName returns the actual model name for display
 func getModelName(modelType model.ModelType, cfg *types.Config) string {
 	switch modelType {
-	case model.CodeBERT:
+	case model.CodeLLamaEncoder:
 		return cfg.Models.Encoder
-	case model.Gemma2B:
+	case model.Gemma2BChat:
 		return cfg.Models.Fast
-	case model.DeepSeek7B:
+	case model.CodeLLamaDecoder:
 		return cfg.Models.Decoder
 	default:
 		return "unknown"
@@ -257,6 +258,33 @@ func getTargetLanguage(langFlag string) types.Language {
 
 // runOnce performs a single test generation
 func runOnce(ctx context.Context, gen *test.Generator, cfg *types.Config, force bool, stats *shared.Stats, targetLang types.Language) (*test.GenerationResult, error) {
+	// Add logger lines here - before analysis starts
+	log.Printf("Analyzing project: path=%s", cfg.ProjectRoot)
+	if targetLang != "" {
+		log.Printf("Config: target_language=%s", targetLang)
+	}
+
+	// Add this debug block
+	log.Printf("🔍 DEBUG: Generator config:")
+	log.Printf("  - ProjectRoot: %q", gen.Config().ProjectRoot)
+	log.Printf("  - TargetLanguage: %q", gen.Config().TargetLanguage)
+	log.Printf("  - Verbose: %v", gen.Config().Verbose)
+
+	// Check if the directory exists
+	if _, err := os.Stat(gen.Config().ProjectRoot); err != nil {
+		log.Printf("❌ ERROR: Project root does not exist: %v", err)
+	} else {
+		log.Printf("✅ Project root exists")
+	}
+
+	// List a few files to verify
+	files, _ := filepath.Glob(filepath.Join(gen.Config().ProjectRoot, "*"))
+	for i, f := range files {
+		if i < 5 { // Show first 5 files
+			log.Printf("  - %s", f)
+		}
+	}
+
 	// Analyze project for functions without tests
 	analysisStart := time.Now()
 	analysis, err := gen.AnalyzeProject(ctx)

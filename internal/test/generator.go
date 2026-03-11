@@ -3,6 +3,9 @@ package test
 import (
 	"context"
 	"fmt"
+	"os"
+	"path/filepath"
+	"regexp"
 	"strings"
 	"time"
 
@@ -155,7 +158,7 @@ func (g *Generator) generateForFunction(ctx context.Context, fn *types.Function,
 
 	// Generate test code using the model
 	resp, err := g.modelClient.Generate(ctx, model.SLMRequest{
-		Model:       model.DeepSeek7B, // Use DeepSeek for test generation
+		Model:       model.CodeLLamaDecoder, // Use DeepSeek for test generation
 		Language:    fn.Language,
 		Prompt:      prompt,
 		Temperature: 0.3, // Lower temperature for more consistent tests
@@ -309,31 +312,81 @@ func (g *Generator) looksLikeTestCode(line string, lang types.Language) bool {
 func (g *Generator) getTestFilePath(fn *types.Function) string {
 	switch fn.Language {
 	case types.Go:
-		// For Go, test files go in the same package with _test.go suffix
+		// Go tests stay in the same directory with _test.go suffix
 		if strings.HasSuffix(fn.FilePath, ".go") {
 			return strings.TrimSuffix(fn.FilePath, ".go") + "_test.go"
 		}
 		return fn.FilePath + "_test.go"
 
 	case types.NodeJS:
-		// For Node.js, test files go alongside with .test.js suffix
-		if strings.HasSuffix(fn.FilePath, ".js") {
-			return strings.TrimSuffix(fn.FilePath, ".js") + ".test.js"
+		// Get the relative path from project root
+		relPath, err := filepath.Rel(g.config.ProjectRoot, fn.FilePath)
+		if err != nil {
+			g.logger.Debug("Failed to get relative path, using fallback", "error", err)
+			return g.fallbackNodeTestPath(fn)
 		}
-		if strings.HasSuffix(fn.FilePath, ".ts") {
-			return strings.TrimSuffix(fn.FilePath, ".ts") + ".test.ts"
+
+		// Create test path in __tests__ directory mirroring the structure
+		testDir := filepath.Join(g.config.ProjectRoot, "__tests__", filepath.Dir(relPath))
+		baseName := filepath.Base(fn.FilePath)
+
+		// Change extension to .test.js or .test.ts
+		ext := filepath.Ext(baseName)
+		testBaseName := strings.TrimSuffix(baseName, ext) + ".test"
+
+		// Determine proper extension for test file
+		switch ext {
+		case ".js", ".jsx", ".mjs", ".cjs":
+			testBaseName += ".js"
+		case ".ts", ".tsx":
+			testBaseName += ".ts"
+		default:
+			testBaseName += ".js"
 		}
-		return fn.FilePath + ".test.js"
+
+		fullPath := filepath.Join(testDir, testBaseName)
+		g.logger.Debug("Node.js test file path", "source", fn.FilePath, "test", fullPath)
+		return fullPath
 
 	case types.Python:
-		// For Python, test files go in same dir with test_ prefix
-		dir := fn.FilePath[:strings.LastIndex(fn.FilePath, "/")]
-		base := fn.FilePath[strings.LastIndex(fn.FilePath, "/")+1:]
-		return dir + "/test_" + base
+		// For Python, tests go in tests/ directory mirroring structure
+		relPath, err := filepath.Rel(g.config.ProjectRoot, fn.FilePath)
+		if err != nil {
+			g.logger.Debug("Failed to get relative path, using fallback", "error", err)
+			dir := filepath.Dir(fn.FilePath)
+			base := filepath.Base(fn.FilePath)
+			return filepath.Join(dir, "test_"+base)
+		}
+
+		testDir := filepath.Join(g.config.ProjectRoot, "tests", filepath.Dir(relPath))
+		baseName := filepath.Base(fn.FilePath)
+		testBaseName := "test_" + baseName
+
+		fullPath := filepath.Join(testDir, testBaseName)
+		g.logger.Debug("Python test file path", "source", fn.FilePath, "test", fullPath)
+		return fullPath
 
 	default:
 		return fn.FilePath + "_test"
 	}
+}
+
+// fallbackNodeTestPath provides a fallback for Node.js when relative path fails
+func (g *Generator) fallbackNodeTestPath(fn *types.Function) string {
+	dir := filepath.Dir(fn.FilePath)
+	base := filepath.Base(fn.FilePath)
+	ext := filepath.Ext(base)
+
+	// Check if we're already in a __tests__ directory
+	if strings.Contains(dir, "__tests__") {
+		// Just change the extension
+		return strings.TrimSuffix(fn.FilePath, ext) + ".test" + ext
+	}
+
+	// Put test in __tests__ subdirectory
+	testDir := filepath.Join(dir, "__tests__")
+	testBase := strings.TrimSuffix(base, ext) + ".test" + ext
+	return filepath.Join(testDir, testBase)
 }
 
 // getTestFramework returns the framework name for the language
@@ -403,6 +456,14 @@ func (g *Generator) WriteTestFiles(ctx context.Context, result *GenerationResult
 		default:
 		}
 
+		// Create directory if it doesn't exist
+		dir := filepath.Dir(test.TestFilePath)
+		if err := os.MkdirAll(dir, 0755); err != nil {
+			g.logger.Error("Failed to create directory", "dir", dir, "error", err)
+			result.Errors = append(result.Errors, fmt.Sprintf("mkdir %s: %v", dir, err))
+			continue
+		}
+
 		// Check if test file already exists
 		exists := g.fileUtils.FileExists(test.TestFilePath)
 
@@ -455,22 +516,41 @@ func (g *Generator) appendToTestFile(test *GeneratedTest) error {
 func (g *Generator) getTestFileHeader(test *GeneratedTest) string {
 	switch test.Language {
 	case types.Go:
+		// Extract package name from file path or use function name
+		pkgName := "main"
+		dir := filepath.Dir(test.TestFilePath)
+		if strings.Contains(dir, "/") {
+			parts := strings.Split(dir, "/")
+			pkgName = parts[len(parts)-1]
+		}
 		return fmt.Sprintf(`package %s_test
 
 import (
 	"testing"
-)`, test.FunctionName)
+)`, pkgName)
 
 	case types.NodeJS:
-		return `// Generated tests
-const { ` + test.FunctionName + ` } = require('./` + test.FunctionName + `');
+		// For Node.js, we need to import the module correctly
+		// Get the relative path from the test file to the source file
+		sourceDir := filepath.Dir(strings.Replace(test.TestFilePath, "__tests__", "", 1))
+		sourceFile := strings.TrimSuffix(filepath.Base(test.TestFilePath), ".test.js")
+		if strings.HasSuffix(test.TestFilePath, ".test.ts") {
+			sourceFile = strings.TrimSuffix(filepath.Base(test.TestFilePath), ".test.ts")
+		}
 
-describe('` + test.FunctionName + `', () => {`
+		importPath := "./" + filepath.Join("..", filepath.Base(sourceDir), sourceFile)
+		return `// Generated tests
+const ` + sourceFile + ` = require('` + importPath + `');
+
+describe('` + sourceFile + `', () => {`
 
 	case types.Python:
-		return `"""Generated tests for ` + test.FunctionName + `."""
+		baseName := strings.TrimPrefix(filepath.Base(test.TestFilePath), "test_")
+		baseName = strings.TrimSuffix(baseName, ".py")
+		return `"""Generated tests for ` + baseName + `."""
 import pytest
-from .` + test.FunctionName + ` import ` + test.FunctionName + `
+from ..` + baseName + ` import *
+
 `
 
 	default:
@@ -496,12 +576,378 @@ func (g *Generator) FindUntestedFunctions(analysis *types.CodeAnalysis) []*types
 
 // AnalyzeProject analyzes the project structure
 func (g *Generator) AnalyzeProject(ctx context.Context) (*types.CodeAnalysis, error) {
-	// Placeholder - you'll implement actual analysis later
+	g.logger.Info("Starting project analysis", "root", g.config.ProjectRoot)
+
+	// SUPER OBVIOUS DEBUG
+	fmt.Println("🚨🚨🚨 ANALYZE PROJECT WAS CALLED! 🚨🚨🚨")
+	fmt.Printf("ProjectRoot: %q\n", g.config.ProjectRoot)
+
+	// Walk the directory tree
+	var files []types.CodeFile
+	var functions []types.Function
+	var imports []types.Import
+
+	err := filepath.Walk(g.config.ProjectRoot, func(path string, info os.FileInfo, err error) error {
+		if err != nil {
+			return err
+		}
+
+		// Skip directories we should ignore
+		if info.IsDir() {
+			if g.shouldSkipDir(info.Name()) {
+				g.logger.Debug("Skipping directory", "dir", info.Name())
+				return filepath.SkipDir
+			}
+			return nil
+		}
+
+		// Check if file extension matches supported languages
+		lang := g.detectLanguage(path)
+		if lang == "" {
+			g.logger.Debug("Skipping unsupported file", "file", path)
+			return nil
+		}
+
+		g.logger.Debug("Processing file", "file", path, "language", lang)
+
+		// Read and parse file
+		content, err := os.ReadFile(path)
+		if err != nil {
+			g.logger.Warn("Failed to read file", "file", path, "error", err)
+			return nil
+		}
+
+		files = append(files, types.CodeFile{
+			Path:     path,
+			Language: lang,
+			Content:  string(content),
+		})
+
+		// Extract functions
+		extracted, err := g.extractFunctions(path, string(content), lang)
+		if err != nil {
+			g.logger.Warn("Failed to extract functions", "file", path, "error", err)
+		} else {
+			functions = append(functions, extracted...)
+			g.logger.Debug("Extracted functions", "file", path, "count", len(extracted))
+		}
+
+		return nil
+	})
+
+	if err != nil {
+		g.logger.Error("Analysis failed", "error", err)
+		return nil, fmt.Errorf("analysis failed: %w", err)
+	}
+
+	g.logger.Info("Analysis complete",
+		"files", len(files),
+		"functions", len(functions))
+
 	return &types.CodeAnalysis{
-		Files:     []types.CodeFile{},
-		Functions: []types.Function{},
+		Files:     files,
+		Functions: functions,
+		Imports:   imports,
 		Timestamp: time.Now().Format(time.RFC3339),
 	}, nil
+}
+
+// extractFunctions extracts function definitions from source code
+func (g *Generator) extractFunctions(path string, content string, lang types.Language) ([]types.Function, error) {
+	switch lang {
+	case types.Go:
+		return g.extractGoFunctions(path, content)
+	case types.NodeJS:
+		return g.extractNodeFunctions(path, content)
+	case types.Python:
+		return g.extractPythonFunctions(path, content)
+	default:
+		return []types.Function{}, nil
+	}
+}
+
+// extractNodeFunctions extracts functions from Node.js/JavaScript/JSX files
+func (g *Generator) extractNodeFunctions(path, content string) ([]types.Function, error) {
+	// SUPER OBVIOUS DEBUG
+	fmt.Printf("🔍 EXTRACTING NODE FUNCTIONS from: %s\n", path)
+	fmt.Printf("   File size: %d bytes\n", len(content))
+	fmt.Printf("   First 100 chars: %q\n", content[:min(100, len(content))])
+
+	var functions []types.Function
+	lines := strings.Split(content, "\n")
+	fmt.Printf("   Lines: %d\n", len(lines))
+
+	// Regular expressions for different function patterns
+	funcDeclRegex := regexp.MustCompile(`function\s+(\w+)\s*\([^)]*\)\s*{`)
+	arrowFuncRegex := regexp.MustCompile(`(?:const|let|var)\s+(\w+)\s*=\s*(?:async\s*)?\([^)]*\)\s*=>\s*{?`)
+	methodRegex := regexp.MustCompile(`(\w+)\s*\([^)]*\)\s*{`)
+	exportFuncRegex := regexp.MustCompile(`export\s+(?:default\s+)?function\s+(\w+)\s*\(`)
+	exportArrowRegex := regexp.MustCompile(`export\s+(?:default\s+)?(?:const|let|var)\s+(\w+)\s*=`)
+
+	for i, line := range lines {
+		lineNum := i + 1
+
+		// Check each pattern
+		patterns := []*regexp.Regexp{
+			funcDeclRegex,
+			arrowFuncRegex,
+			exportFuncRegex,
+			exportArrowRegex,
+			methodRegex,
+		}
+
+		for _, pattern := range patterns {
+			if matches := pattern.FindStringSubmatch(line); len(matches) > 1 {
+				funcName := matches[1]
+
+				// Skip if it's likely a false positive (like common keywords)
+				if funcName == "if" || funcName == "for" || funcName == "while" {
+					continue
+				}
+
+				fmt.Printf("   ✅ Found function at line %d: %s (pattern: %T)\n", lineNum, funcName, pattern)
+
+				// Build signature (simplified)
+				signature := line
+				if len(line) > 100 {
+					signature = line[:100] + "..."
+				}
+
+				// Check if function is exported (starts with uppercase or has export keyword)
+				isExported := strings.Contains(line, "export") || (len(funcName) > 0 && funcName[0] >= 'A' && funcName[0] <= 'Z')
+
+				// Check if test exists
+				hasTest := g.checkNodeTestExists(path, funcName)
+
+				fn := types.Function{
+					Name:       funcName,
+					Language:   types.NodeJS,
+					FilePath:   path,
+					Signature:  strings.TrimSpace(signature),
+					Content:    line,
+					LineStart:  lineNum,
+					LineEnd:    lineNum,
+					HasTest:    hasTest,
+					IsExported: isExported,
+				}
+
+				functions = append(functions, fn)
+				g.logger.Debug("Found Node.js function",
+					"name", funcName,
+					"file", path,
+					"line", lineNum,
+					"exported", isExported,
+					"hasTest", hasTest)
+
+				break // Only add once per line
+			}
+		}
+	}
+
+	fmt.Printf("   Total functions found: %d\n", len(functions))
+	return functions, nil
+}
+
+// extractGoFunctions extracts functions from Go files
+func (g *Generator) extractGoFunctions(path, content string) ([]types.Function, error) {
+	var functions []types.Function
+	lines := strings.Split(content, "\n")
+
+	// Simple regex for Go function declarations
+	// Note: This is simplified - real implementation should use go/parser
+	funcRegex := regexp.MustCompile(`func\s+(\w+)\s*\([^)]*\)(?:\s*\(?[^{]*\)?)?\s*{`)
+
+	for i, line := range lines {
+		lineNum := i + 1
+
+		if matches := funcRegex.FindStringSubmatch(line); len(matches) > 1 {
+			funcName := matches[1]
+
+			// Skip if it's a method receiver or test function
+			if strings.Contains(line, "func (") || strings.HasPrefix(funcName, "Test") {
+				continue
+			}
+
+			// Check if function is exported (starts with uppercase)
+			isExported := len(funcName) > 0 && funcName[0] >= 'A' && funcName[0] <= 'Z'
+
+			// Check if test exists
+			hasTest := g.checkGoTestExists(path, funcName)
+
+			fn := types.Function{
+				Name:       funcName,
+				Language:   types.Go,
+				FilePath:   path,
+				Signature:  strings.TrimSpace(line),
+				Content:    line,
+				LineStart:  lineNum,
+				LineEnd:    lineNum,
+				HasTest:    hasTest,
+				IsExported: isExported,
+			}
+
+			functions = append(functions, fn)
+			g.logger.Debug("Found Go function",
+				"name", funcName,
+				"file", path,
+				"line", lineNum,
+				"exported", isExported,
+				"hasTest", hasTest)
+		}
+	}
+
+	return functions, nil
+}
+
+// extractPythonFunctions extracts functions from Python files
+func (g *Generator) extractPythonFunctions(path, content string) ([]types.Function, error) {
+	var functions []types.Function
+	lines := strings.Split(content, "\n")
+
+	// Regex for Python function definitions
+	funcRegex := regexp.MustCompile(`def\s+(\w+)\s*\([^)]*\):`)
+
+	for i, line := range lines {
+		lineNum := i + 1
+
+		if matches := funcRegex.FindStringSubmatch(line); len(matches) > 1 {
+			funcName := matches[1]
+
+			// Skip if it's a private method (starts with _)
+			isExported := !strings.HasPrefix(funcName, "_")
+
+			// Check if test exists
+			hasTest := g.checkPythonTestExists(path, funcName)
+
+			fn := types.Function{
+				Name:       funcName,
+				Language:   types.Python,
+				FilePath:   path,
+				Signature:  strings.TrimSpace(line),
+				Content:    line,
+				LineStart:  lineNum,
+				LineEnd:    lineNum,
+				HasTest:    hasTest,
+				IsExported: isExported,
+			}
+
+			functions = append(functions, fn)
+			g.logger.Debug("Found Python function",
+				"name", funcName,
+				"file", path,
+				"line", lineNum,
+				"exported", isExported,
+				"hasTest", hasTest)
+		}
+	}
+
+	return functions, nil
+}
+
+// checkNodeTestExists checks if a test exists for a Node.js function
+func (g *Generator) checkNodeTestExists(sourcePath, funcName string) bool {
+	// Get the expected test file path using the same logic as getTestFilePath
+	// For checking existence, we'll create a temporary function object
+	tempFn := &types.Function{
+		FilePath: sourcePath,
+		Language: types.NodeJS,
+		Name:     funcName,
+	}
+	expectedPath := g.getTestFilePath(tempFn)
+
+	// Check if the file exists
+	if _, err := os.Stat(expectedPath); err == nil {
+		// File exists, check if it contains the function name (simplified)
+		content, err := os.ReadFile(expectedPath)
+		if err == nil && strings.Contains(string(content), funcName) {
+			return true
+		}
+	}
+
+	return false
+}
+
+// checkGoTestExists checks if a test exists for a Go function
+func (g *Generator) checkGoTestExists(sourcePath, funcName string) bool {
+	testPath := strings.TrimSuffix(sourcePath, ".go") + "_test.go"
+	if _, err := os.Stat(testPath); err != nil {
+		return false
+	}
+
+	// Check if test file contains a test for this function
+	content, err := os.ReadFile(testPath)
+	if err != nil {
+		return false
+	}
+
+	// Look for TestFuncName pattern
+	return strings.Contains(string(content), "Test"+funcName)
+}
+
+// checkPythonTestExists checks if a test exists for a Python function
+func (g *Generator) checkPythonTestExists(sourcePath, funcName string) bool {
+	// Get the expected test file path using the same logic as getTestFilePath
+	tempFn := &types.Function{
+		FilePath: sourcePath,
+		Language: types.Python,
+		Name:     funcName,
+	}
+	expectedPath := g.getTestFilePath(tempFn)
+
+	if _, err := os.Stat(expectedPath); err != nil {
+		return false
+	}
+
+	// Check if test file contains a test for this function
+	content, err := os.ReadFile(expectedPath)
+	if err != nil {
+		return false
+	}
+
+	// Look for test_funcName pattern
+	return strings.Contains(string(content), "test_"+funcName)
+}
+
+// Helper methods
+func (g *Generator) shouldSkipDir(name string) bool {
+	skipDirs := map[string]bool{
+		"node_modules": true,
+		".git":         true,
+		"vendor":       true,
+		"dist":         true,
+		"build":        true,
+		"__pycache__":  true,
+		".venv":        true,
+		"env":          true,
+		"cache":        true,
+		"coverage":     true,
+		"test-results": true,
+		"__tests__":    false, // Don't skip tests directory
+		"tests":        false, // Don't skip tests directory
+	}
+	return skipDirs[name]
+}
+
+func (g *Generator) detectLanguage(path string) types.Language {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".go":
+		return types.Go
+	case ".js", ".jsx", ".ts", ".tsx", ".mjs", ".cjs":
+		return types.NodeJS
+	case ".py", ".pyw", ".pyx":
+		return types.Python
+	default:
+		return ""
+	}
+}
+
+// min returns the minimum of two integers
+func min(a, b int) int {
+	if a < b {
+		return a
+	}
+	return b
 }
 
 // CheckCoverage checks test coverage

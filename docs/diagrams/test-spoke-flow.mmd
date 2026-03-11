@@ -23,7 +23,7 @@ graph TB
     
     subgraph SLM_Test [SLM Processing]
         direction LR
-        T_Encoder[CodeBERT<br/>Code Understanding]
+        T_Encoder[codellama:7b<br/>Code Understanding]
         T_Gen[DeepSeek 7B<br/>Test Generation]
         
         T_Encoder --> T_Gen
@@ -65,7 +65,7 @@ graph TB
     
     subgraph SLM_Analysis [SLM Analysis]
         direction LR
-        F_Encoder[CodeBERT<br/>Error Context]
+        F_Encoder[codellama:7b<br/>Error Context]
         F_Analyzer[DeepSeek 7B<br/>Root Cause Analysis]
         
         F_Encoder --> F_Analyzer

@@ -10,14 +10,14 @@ import (
 type ModelType string
 
 const (
-	// CodeBERT - encoder model for code understanding
-	CodeBERT ModelType = "codebert"
+	// CodeLlamaEncoder - encoder model for code understanding
+	CodeLlamaEncoder ModelType = "codellama:7b"
 
-	// Gemma2B - fast decoder for documentation
+	// CodeLlamaDecoder - decoder model for test generation
+	CodeLlamaDecoder ModelType = "codellama:7b"
+
+	// Gemma2B - fast model for simple tasks
 	Gemma2B ModelType = "gemma2:2b"
-
-	// DeepSeek7B - complex reasoning decoder for tests
-	DeepSeek7B ModelType = "deepseek-coder:7b"
 )
 
 // String returns the string representation of the model type
@@ -25,41 +25,9 @@ func (m ModelType) String() string {
 	return string(m)
 }
 
-// Request represents a request to an SLM model
-// This is the input structure for model generation
-type Request struct {
-	// Unique identifier for this request
-	ID string `json:"id"`
-
-	// Model to use for generation
-	Model ModelType `json:"model"`
-
-	// Programming language of the code being processed
-	Language types.Language `json:"language"`
-
-	// The prompt to send to the model
-	Prompt string `json:"prompt"`
-
-	// System prompt for model context
-	System string `json:"system,omitempty"`
-
-	// Context from previous requests (for conversation)
-	Context []int `json:"context,omitempty"`
-
-	// Model-specific options
-	Options map[string]interface{} `json:"options,omitempty"`
-
-	// Generation parameters
-	Temperature float32 `json:"temperature,omitempty"`
-	MaxTokens   int     `json:"max_tokens,omitempty"`
-
-	// Metadata
-	Timestamp time.Time `json:"timestamp"`
-}
-
-// Response represents a response from an SLM model
+// SLMResponse represents a response from an SLM model
 // This is the output structure from model generation
-type Response struct {
+type SLMResponse struct {
 	// Unique identifier for this response
 	ID string `json:"id"`
 
@@ -324,7 +292,7 @@ type BatchRequest struct {
 	ID string `json:"id"`
 
 	// Individual requests
-	Requests []Request `json:"requests"`
+	Requests []SLMRequest `json:"requests"`
 
 	// Whether to process in parallel
 	Parallel bool `json:"parallel"`
@@ -339,7 +307,7 @@ type BatchResponse struct {
 	BatchID string `json:"batch_id"`
 
 	// Individual responses
-	Responses []Response `json:"responses"`
+	Responses []SLMResponse `json:"responses"`
 
 	// Any errors that occurred
 	Errors []string `json:"errors,omitempty"`
@@ -393,22 +361,22 @@ type CompletionChunk struct {
 }
 
 // ValidateResponse checks if a response is valid
-func (r *Response) ValidateResponse() bool {
+func (r *SLMResponse) ValidateResponse() bool {
 	return r.ID != "" && r.Response != ""
 }
 
 // IsError checks if the response contains an error
-func (r *Response) IsError() bool {
+func (r *SLMResponse) IsError() bool {
 	return r.Error != ""
 }
 
 // Success returns true if generation was successful
-func (r *Response) Success() bool {
+func (r *SLMResponse) Success() bool {
 	return !r.IsError() && r.Done && r.Response != ""
 }
 
 // TokensPerSecond calculates tokens per second
-func (r *Response) TokensPerSecond() float64 {
+func (r *SLMResponse) TokensPerSecond() float64 {
 	if r.Duration == 0 || r.TokensUsed == 0 {
 		return 0
 	}
@@ -416,7 +384,7 @@ func (r *Response) TokensPerSecond() float64 {
 }
 
 // GetStats returns generation statistics
-func (r *Response) GetStats() GenerationStats {
+func (r *SLMResponse) GetStats() GenerationStats {
 	return GenerationStats{
 		Model:           r.Model,
 		TokensGenerated: r.TokensUsed,
@@ -426,11 +394,11 @@ func (r *Response) GetStats() GenerationStats {
 }
 
 // IsComplete checks if a response is complete
-func (r *Response) IsComplete() bool {
+func (r *SLMResponse) IsComplete() bool {
 	return r.Done && r.Error == ""
 }
 
 // HasContext checks if the response has context for continuation
-func (r *Response) HasContext() bool {
+func (r *SLMResponse) HasContext() bool {
 	return len(r.Context) > 0
 }

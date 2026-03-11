@@ -15,8 +15,8 @@ func TestDefaultConfig(t *testing.T) {
 		t.Fatal("DefaultConfig returned nil")
 	}
 
-	if cfg.Models.Encoder != "codebert" {
-		t.Errorf("expected encoder 'codebert', got %s", cfg.Models.Encoder)
+	if cfg.Models.Encoder != "codellama:7b" {
+		t.Errorf("expected encoder 'codellama:7b', got %s", cfg.Models.Encoder)
 	}
 
 	if cfg.TestSpoke.CoverageThreshold != 80.0 {

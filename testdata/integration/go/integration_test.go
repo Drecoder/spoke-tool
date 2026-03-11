@@ -47,8 +47,8 @@ func TestMain(m *testing.M) {
 			Decoder string `json:"decoder" yaml:"decoder"`
 			Fast    string `json:"fast" yaml:"fast"`
 		}{
-			Encoder: "codebert",
-			Decoder: "deepseek-coder:7b",
+			Encoder: "codellama:7b",
+			Decoder: "codellama:7b",
 			Fast:    "gemma2:2b",
 		},
 		TestSpoke: struct {

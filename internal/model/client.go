@@ -34,6 +34,20 @@ type SLMRequest struct {
 	Timestamp   time.Time              `json:"timestamp"`
 }
 
+// Response represents a response from an SLM
+type Response struct {
+	ID        string         `json:"id"`
+	RequestID string         `json:"request_id"`
+	Model     ModelType      `json:"model"`
+	Language  types.Language `json:"language"`
+	Response  string         `json:"response"`
+	Error     string         `json:"error,omitempty"`
+	Duration  time.Duration  `json:"duration"`
+	TokensUsed int           `json:"tokens_used"`
+	Done      bool           `json:"done"`
+	Timestamp time.Time      `json:"timestamp"`
+}
+
 // Client handles communication with Ollama SLMs
 type Client struct {
 	client   *api.Client
@@ -128,7 +142,7 @@ func (c *Client) Generate(ctx context.Context, req SLMRequest) (*Response, error
 	start := time.Now()
 
 	// Generate
-	resp := &Response{
+	resp := &{
 		ID:        uuid.New().String(),
 		RequestID: req.ID,
 		Model:     req.Model,

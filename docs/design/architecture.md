@@ -43,7 +43,7 @@ The Spoke Tool is a local AI-powered development assistant that automatically ge
 ┌─────────────────────────────────────────────────────────────┐
 │                       SLM Pool                               │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  CodeBERT    │  │   Gemma 2B   │  │ DeepSeek 7B  │      │
+│  │  codellama:7b    │  │   Gemma 2B   │  │ DeepSeek 7B  │      │
 │  │  (Encoder)   │  │   (Fast)     │  │ (Reasoning)  │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 │                    ┌──────────────┐                         │
@@ -121,7 +121,7 @@ Local language models running via Ollama.
 
 | Model | Purpose | Use Cases |
 |-------|---------|-----------|
-| **CodeBERT** | Code understanding | Function analysis, test gap detection |
+| **codellama:7b** | Code understanding | Function analysis, test gap detection |
 | **Gemma 2B** | Fast generation | Documentation, simple examples |
 | **DeepSeek 7B** | Complex reasoning | Test generation, failure analysis |
 
@@ -165,7 +165,7 @@ Local language models running via Ollama.
 
 ## 🧠 SLM Interaction Patterns
 
-### Code Understanding (CodeBERT)
+### Code Understanding (codellama:7b)
 ```go
 // Input: Function code
 // Output: Structured analysis
@@ -305,8 +305,8 @@ spoke-tool/
 ```yaml
 # config.yaml example
 models:
-  encoder: "codebert"
-  decoder: "deepseek-coder:7b"
+  encoder: "codellama:7b"
+  decoder: "codellama:7b"
   fast: "gemma2:2b"
 
 test_spoke:
@@ -358,6 +358,6 @@ squeeze:
 ## 📚 References
 
 - [Ollama Documentation](https://ollama.ai/)
-- [CodeBERT Paper](https://arxiv.org/abs/2002.08155)
+- [codellama:7b Paper](https://arxiv.org/abs/2002.08155)
 - [DeepSeek Coder](https://github.com/deepseek-ai/DeepSeek-Coder)
 - [Gemma Models](https://ai.google.dev/gemma)

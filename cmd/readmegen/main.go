@@ -192,7 +192,7 @@ func run(flags *shared.CommandFlags, versionInfo shared.VersionInfo) error {
 	return nil
 }
 
-// loadConfig loads and validates the configuration
+// loadTestGenConfig loads and validates the configuration
 func loadTestGenConfig(path string) (*types.Config, error) {
 	// If config doesn't exist, use defaults
 	if _, err := os.Stat(path); os.IsNotExist(err) {
@@ -214,16 +214,16 @@ func initModelClient(cfg *types.Config) (*model.Client, error) {
 		OllamaHost: "http://localhost:11434",
 		Timeout:    30 * time.Second,
 		Models: map[model.ModelType]string{
-			model.CodeBERT:   cfg.Models.Encoder,
-			model.Gemma2B:    cfg.Models.Fast,
-			model.DeepSeek7B: cfg.Models.Decoder,
+			model.CodeLLamaEncoder: cfg.Models.Encoder,
+			model.Gemma2B:          cfg.Models.Fast,
+			model.CodeLLamaDecoder: cfg.Models.Decoder,
 		},
 	}
 
 	return model.NewClient(modelConfig)
 }
 
-// getModelName returns the actual model name for display
+// getModelDisplayName returns the actual model name for display
 func getModelDisplayName(modelType model.ModelType, cfg *types.Config) string {
 	switch modelType {
 	case model.CodeLLamaEncoder:
@@ -315,7 +315,7 @@ func runOnce(ctx context.Context, gen *test.Generator, cfg *types.Config, force 
 				result.Message = fmt.Sprintf("%d tests failed", testResults.Failed)
 				result.ExitCode = shared.ExitCodeGenerationError
 
-				// Analyze failures by iterating through Results (not Failures)
+				// Analyze failures by iterating through Results
 				for _, testResult := range testResults.Results {
 					if testResult.Status == types.TestStatusFailed {
 						analysis, err := gen.AnalyzeFailure(ctx, &testResult)
@@ -353,7 +353,7 @@ func runOnce(ctx context.Context, gen *test.Generator, cfg *types.Config, force 
 
 // runWatch watches for changes and regenerates tests
 func runWatch(ctx context.Context, gen *test.Generator, cfg *types.Config, stats *shared.Stats) {
-	// Create ticker for periodic checks (simplified - in production use fsnotify)
+	// Create ticker for periodic checks
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
@@ -404,7 +404,7 @@ func runWatch(ctx context.Context, gen *test.Generator, cfg *types.Config, stats
 	}
 }
 
-// hasChanged compares two analyses to determine if code has changed
+// testGenHasChanged compares two analyses to determine if code has changed
 func testGenHasChanged(last *types.CodeAnalysis, current *types.CodeAnalysis) bool {
 	if last == nil || current == nil {
 		return true

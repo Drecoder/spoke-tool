@@ -61,7 +61,7 @@ type FailureExplanation struct {
 // NewInterpreter creates a new test failure interpreter
 func NewInterpreter(config InterpreterConfig, modelClient *model.Client) *Interpreter {
 	if config.Model == "" {
-		config.Model = model.DeepSeek7B // Best for reasoning about failures
+		config.Model = model.CodeLLamaDecoder // Best for reasoning about failures
 	}
 	if config.MaxExplanationLength == 0 {
 		config.MaxExplanationLength = 500

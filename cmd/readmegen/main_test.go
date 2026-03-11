@@ -40,9 +40,9 @@ func hasChanged(old, new *types.CodeAnalysis) bool {
 
 func getModelName(modelType model.ModelType, cfg *types.Config) string {
 	switch modelType {
-	case model.CodeBERT:
+	case model.CodeLLamaEncoder:
 		return cfg.Models.Encoder
-	case model.DeepSeek7B:
+	case model.CodeLLamaDecoder:
 		return cfg.Models.Decoder
 	case model.Gemma2B:
 		return cfg.Models.Fast
@@ -58,8 +58,8 @@ func TestGetModelName(t *testing.T) {
 			Decoder string `json:"decoder" yaml:"decoder"`
 			Fast    string `json:"fast" yaml:"fast"`
 		}{
-			Encoder: "codebert",
-			Decoder: "deepseek-coder:7b",
+			Encoder: "codellama:7b",
+			Decoder: "codellama:7b",
 			Fast:    "gemma2:2b",
 		},
 	}
@@ -68,8 +68,8 @@ func TestGetModelName(t *testing.T) {
 		modelType model.ModelType
 		expected  string
 	}{
-		{model.CodeBERT, "codebert"},
-		{model.DeepSeek7B, "deepseek-coder:7b"},
+		{model.CodeLLamaEncoder, "codellama:7b"},
+		{model.CodeLLamaDecoder, "codellama:7b"},
 		{model.Gemma2B, "gemma2:2b"},
 	}
 

@@ -132,11 +132,15 @@ test_spoke:
   
   # Test directory patterns to exclude
   exclude_dirs:
-    - "vendor"
     - "node_modules"
     - ".git"
-    - "testdata"
-    - "mocks"
+    - "vendor"
+    - "dist"
+    - "build"
+    - "coverage"
+    - "__pycache__"
+    - ".venv"
+    - "env"
   
   # File extensions to analyze by language
   extensions:
@@ -198,7 +202,7 @@ test_spoke:
   # Failure analysis
   failure_analysis:
     enabled: true
-    model: "deepseek-coder:7b"
+    model: "codellama:7b"
     include_context: true
     max_explanation_length: 500
 

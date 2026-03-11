@@ -10,7 +10,7 @@ import (
 // PromptTemplates holds all prompt templates for different tasks and languages
 // This is PURELY TEMPLATES - no logic, no suggestions, no fixes
 type PromptTemplates struct {
-	// Code understanding templates (CodeBERT)
+	// Code understanding templates (codellama:7b)
 	CodeUnderstanding map[types.Language]string
 
 	// Test generation templates (DeepSeek 7B)
@@ -22,7 +22,7 @@ type PromptTemplates struct {
 	// Failure analysis templates (DeepSeek 7B) - EXPLAINS only
 	FailureAnalysis map[types.Language]string
 
-	// Example extraction templates (CodeBERT/Gemma)
+	// Example extraction templates (codellama:7b/Gemma)
 	ExampleExtraction map[types.Language]string
 }
 

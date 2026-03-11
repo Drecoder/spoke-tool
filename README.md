@@ -56,7 +56,7 @@ All processing happens **locally** using SLMs (Small Language Models) via Ollama
 ┌─────────────────────────────────────────────────────────────┐
 │                       SLM Pool                               │
 │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐      │
-│  │  CodeBERT    │  │   Gemma 2B   │  │ DeepSeek 7B  │      │
+│  │  codellama:7b    │  │   Gemma 2B   │  │ DeepSeek 7B  │      │
 │  │  (Encoder)   │  │   (Fast)     │  │ (Reasoning)  │      │
 │  └──────────────┘  └──────────────┘  └──────────────┘      │
 │                    ┌──────────────┐                         │
@@ -83,9 +83,9 @@ All processing happens **locally** using SLMs (Small Language Models) via Ollama
 - Ollama installed and running
 - Required models pulled:
   ```bash
-  ollama pull codebert
+  ollama pull codellama:7b
   ollama pull gemma2:2b
-  ollama pull deepseek-coder:7b
+  ollama pull codellama:7b
   ```
 
 ### Installation
@@ -188,8 +188,8 @@ Create a `config.yaml` file in your project root:
 ```yaml
 # config.yaml
 models:
-  encoder: "codebert"
-  decoder: "deepseek-coder:7b"
+  encoder: "codellama:7b"
+  decoder: "codellama:7b"
   fast: "gemma2:2b"
 
 test_spoke:
@@ -409,7 +409,7 @@ This will:
 | Issue | Solution |
 |-------|----------|
 | `connection refused` | Ensure Ollama is running: `ollama serve` |
-| `model not found` | Pull required models: `ollama pull codebert` |
+| `model not found` | Pull required models: `ollama pull codellama:7b` |
 | `no functions found` | Check language detection or file extensions |
 | `tests fail to run` | Verify test framework is installed |
 
